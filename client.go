@@ -30,6 +30,22 @@ type AuthInfo struct {
 	CodeVerifier string
 }
 
+type Profile struct {
+	Me      string `json:"me"`
+	Profile struct {
+		Name  string `json:"name"`
+		URL   string `json:"url"`
+		Photo string `json:"photo"`
+		Email string `json:"email"`
+	} `json:"profile"`
+}
+
+// Authenticate takes a profile URL and the desired scope, discovers the required endpoints,
+// generates a random scope and code challenge (using method SHA256), and builds the authorization
+// URL. It returns the authorization info, redirect URI and an error.
+//
+// The returned AuthInfo should be stored by the caller of this function in such a way that it
+// can be retrieved to validate the callback.
 func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) {
 	endpoints, err := c.DiscoverEndpoints(profile)
 	if err != nil {
@@ -66,6 +82,8 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 	}, authURL, nil
 }
 
+// ValidateCallback validates the callback request by checking if the code exists
+// and if the state is valid according to the provided AuthInfo.
 func (c *Client) ValidateCallback(i *AuthInfo, r *http.Request) (string, error) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -194,14 +212,4 @@ func (c *Client) FetchProfile(i *AuthInfo, code string) (*Profile, error) {
 	}
 
 	return profile, nil
-}
-
-type Profile struct {
-	Me      string `json:"me"`
-	Profile struct {
-		Name  string `json:"name"`
-		URL   string `json:"url"`
-		Photo string `json:"photo"`
-		Email string `json:"email"`
-	} `json:"profile"`
 }

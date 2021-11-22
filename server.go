@@ -23,6 +23,8 @@ type AuthenticationRequest struct {
 	CodeChallengeMethod string
 }
 
+// ParseAuthorization parses an authorization request and returns all the collected
+// information about the request.
 func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, err
@@ -104,12 +106,4 @@ func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 	// TODO: redirect URI may have a different host. In this case, we do
 	// discovery: https://indieauth.spec.indieweb.org/#redirect-url
 	return errors.New("redirect uri has different host from client id")
-}
-
-func (s *Server) ParseCodeExchangeRequest(r *http.Request) error {
-	if err := r.ParseForm(); err != nil {
-		return err
-	}
-
-	return nil
 }
