@@ -20,9 +20,24 @@ var (
 )
 
 type Server struct {
-	Client *http.Client
-
+	Client      *http.Client
 	RequirePKCE bool
+}
+
+// NewServer creates a new Server that from the given options. If
+// no httpClient is given, http.DefaultClient will be used.
+func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
+	s := &Server{
+		RequirePKCE: requirePKCE,
+	}
+
+	if httpClient != nil {
+		s.Client = httpClient
+	} else {
+		s.Client = http.DefaultClient
+	}
+
+	return s
 }
 
 type AuthenticationRequest struct {
