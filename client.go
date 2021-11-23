@@ -20,11 +20,69 @@ var (
 	ErrInvalidState  error = errors.New("state does not match")
 )
 
+// Client is a IndieAuth client. As a client, you want to authenticate other users
+// to log into onto your website.
+//
+// First, create a client with the correct client ID and callback URL.
+//
+//	client := NewClient("https://example.com/", "https://example.com/callback", nil)
+//
+// Then, obtain the user's profile URL via some method, such as an HTTP form. Optionally,
+// canonicalize the value (see CanonicalizeURL for more information).
+//
+//  profile = CanonicalizeURL(profile)
+//
+// Then, validate the profile URL according to the specification.
+//
+// 	err = IsValidProfileURL(profile)
+// 	if err != nil {
+// 		// Do something
+// 	}
+//
+// Obtain the authentication information and redirect URL:
+//
+// 	authData, redirect, err := client.Authenticate(profile, "the scopes you need")
+// 	if err != nil {
+// 		// Do something
+// 	}
+//
+// The client should now store authData because it will be necessary to verify the callback.
+// You can store it, for example, in a database or cookie. Then, redirect the user:
+//
+// 	http.Redirect(w, r, redirect, http.StatusSeeOther)
+//
+// In the callback handler, you should obtain authData according to the method you defined.
+// Then, call ValidateCallback to obtain the code:
+//
+//	code, err := client.ValidateCallback(authData, r)
+// 	if err != nil {
+//		// Do something
+// 	}
+//
+// Now that you have the code, you have to redeem it. You can either use FetchProfile to
+// redeem it by the users' profile or GetToken.
 type Client struct {
 	Client *http.Client
 
 	ClientID    string
 	RedirectURL string
+}
+
+// NewClient creates a new Client from the provided clientID and redirectURL. If
+// no httpClient is given, http.DefaultClient will be used.
+func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
+	c := &Client{
+		ClientID:    clientID,
+		RedirectURL: redirectURL,
+	}
+
+	if httpClient != nil {
+		c.Client = httpClient
+	} else {
+		c.Client = http.DefaultClient
+	}
+
+	return c
 }
 
 type AuthInfo struct {
@@ -146,6 +204,15 @@ func ProfileFromToken(token *oauth2.Token) *Profile {
 //
 // Note that token.Raw may contain other information returned by the server, such as
 // "Me", "Profile" and "Scope".
+//
+//	token, oauth2, err := client.GetToken(authData, code)
+//	if err != nil {
+//		// Do something
+// 	}
+//	httpClient := oauth2.Client(context.Background(), token)
+//
+// You can now use httpClient to make requests to, for example, a Micropub endpoint. They
+// are authenticated with token. See https://pkg.go.dev/golang.org/x/oauth2 for more details.
 func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Config, error) {
 	o := &oauth2.Config{
 		ClientID:    c.ClientID,
@@ -165,7 +232,6 @@ func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Conf
 	if err != nil {
 		return nil, nil, err
 	}
-
 	return tok, o, nil
 }
 
