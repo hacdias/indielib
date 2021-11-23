@@ -26,15 +26,37 @@ type Endpoints struct {
 // target URL.
 var ErrNoEndpointFound = fmt.Errorf("no endpoint found")
 
-// DiscoverEndpoints discovers the webmention endpoint for the provided URL.
+// DiscoverEndpoints discovers the authorization and token endpoints for the provided URL.
 // This code is partially based on https://github.com/willnorris/webmention/blob/main/webmention.go.
 func (s *Client) DiscoverEndpoints(urlStr string) (*Endpoints, error) {
-	headEndpoints, err := s.discoverRequest(http.MethodHead, urlStr)
+	urls, err := s.discoverEndpoints(urlStr, AuthorizationEndpointRel, TokenEndpointRel)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Endpoints{
+		Authorization: urls[0],
+		Token:         urls[1],
+	}, nil
+}
+
+// DiscoverEndpoint discovers as given endpoint identified by rel.
+func (s *Client) DiscoverEndpoint(urlStr, rel string) (string, error) {
+	urls, err := s.discoverEndpoints(urlStr, rel)
+	if err != nil {
+		return "", err
+	}
+
+	return urls[0], nil
+}
+
+func (s *Client) discoverEndpoints(urlStr string, rels ...string) ([]string, error) {
+	headEndpoints, err := s.discoverRequest(http.MethodHead, urlStr, rels...)
 	if err == nil && headEndpoints != nil {
 		return headEndpoints, nil
 	}
 
-	getEndpoints, err := s.discoverRequest(http.MethodGet, urlStr)
+	getEndpoints, err := s.discoverRequest(http.MethodGet, urlStr, rels...)
 	if err == nil && getEndpoints != nil {
 		return getEndpoints, nil
 	}
@@ -42,7 +64,7 @@ func (s *Client) DiscoverEndpoints(urlStr string) (*Endpoints, error) {
 	return nil, err
 }
 
-func (s *Client) discoverRequest(method, urlStr string) (*Endpoints, error) {
+func (s *Client) discoverRequest(method, urlStr string, rels ...string) ([]string, error) {
 	req, err := http.NewRequest(method, urlStr, nil)
 	if err != nil {
 		return nil, err
@@ -58,7 +80,7 @@ func (s *Client) discoverRequest(method, urlStr string) (*Endpoints, error) {
 		return nil, fmt.Errorf("response error: %v", resp.StatusCode)
 	}
 
-	endpoints, err := extractEndpoints(resp, AuthorizationEndpointRel, TokenEndpointRel)
+	endpoints, err := extractEndpoints(resp, rels...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +90,7 @@ func (s *Client) discoverRequest(method, urlStr string) (*Endpoints, error) {
 		return nil, err
 	}
 
-	return &Endpoints{
-		Authorization: urls[0],
-		Token:         urls[1],
-	}, nil
+	return urls, nil
 }
 
 func extractEndpoints(resp *http.Response, rels ...string) ([]string, error) {
