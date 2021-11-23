@@ -214,14 +214,7 @@ func ProfileFromToken(token *oauth2.Token) *Profile {
 // You can now use httpClient to make requests to, for example, a Micropub endpoint. They
 // are authenticated with token. See https://pkg.go.dev/golang.org/x/oauth2 for more details.
 func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Config, error) {
-	o := &oauth2.Config{
-		ClientID:    c.ClientID,
-		RedirectURL: c.RedirectURL,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  i.Authorization,
-			TokenURL: i.Token,
-		},
-	}
+	o := c.GetOAuth2(&i.Endpoints)
 
 	tok, err := o.Exchange(
 		context.Background(),
@@ -233,6 +226,19 @@ func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Conf
 		return nil, nil, err
 	}
 	return tok, o, nil
+}
+
+// GetOAuth2 returns an oauth2.Config based on the given endpoints. This can be used
+// to get an http.Client See https://pkg.go.dev/golang.org/x/oauth2 for more details.
+func (c *Client) GetOAuth2(e *Endpoints) *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:    c.ClientID,
+		RedirectURL: c.RedirectURL,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  e.Authorization,
+			TokenURL: e.Token,
+		},
+	}
 }
 
 // FetchProfile fetches the user profile, exchanging the authentication code from
