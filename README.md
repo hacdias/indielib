@@ -14,6 +14,7 @@ Some examples:
   - Validate callback data: https://github.com/hacdias/eagle/blob/f59b3b6fc290e30b8c999edac4b3feadc6c3d7b6/server/login.go#L169-L192
 - As server:
   - Parsing authorization request: https://github.com/hacdias/eagle/blob/f59b3b6fc290e30b8c999edac4b3feadc6c3d7b6/server/auth.go#L29-L46
+  - Validate the code challenge at the authorization endpoint: https://github.com/hacdias/eagle/blob/f59b3b6fc290e30b8c999edac4b3feadc6c3d7b6/server/auth.go#L262-L268
 
 ## License
 

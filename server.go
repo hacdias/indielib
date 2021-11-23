@@ -8,6 +8,17 @@ import (
 	"strings"
 )
 
+var (
+	ErrInvalidCodeChallengeMethod error = errors.New("invalid code challenge method")
+	ErrInvalidGrantType           error = errors.New("grant_type must be authorization_code")
+	ErrNoMatchClientID            error = errors.New("client_id differs")
+	ErrNoMatchRedirectURI         error = errors.New("redirect_uri differs")
+	ErrPKCERequired               error = errors.New("pkce is required, not provided")
+	ErrCodeChallengeFailed        error = errors.New("code challenge failed")
+	ErrInvalidResponseType        error = errors.New("response_type must be code")
+	ErrWrongCodeChallengeLenght   error = errors.New("code_challenge length must be between 43 and 128 charachters long")
+)
+
 type Server struct {
 	Client *http.Client
 
@@ -37,7 +48,7 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 	}
 
 	if resType != "code" {
-		return nil, errors.New("response_type must be code")
+		return nil, ErrInvalidResponseType
 	}
 
 	clientID := r.FormValue("client_id")
@@ -58,15 +69,15 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 	cc = r.Form.Get("code_challenge")
 	if cc != "" {
 		if len(cc) < 43 || len(cc) > 128 {
-			return nil, errors.New("code_challenge length must be between 43 and 128 charachters long")
+			return nil, ErrWrongCodeChallengeLenght
 		}
 
 		ccm = r.Form.Get("code_challenge_method")
 		if !IsValidCodeChallengeMethod(ccm) {
-			return nil, errors.New("code_challenge_method not supported")
+			return nil, ErrInvalidCodeChallengeMethod
 		}
 	} else if s.RequirePKCE {
-		return nil, errors.New("code_challenge and code_challenge_method are required")
+		return nil, ErrPKCERequired
 	}
 
 	req := &AuthenticationRequest{
@@ -106,4 +117,58 @@ func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 	// TODO: redirect URI may have a different host. In this case, we do
 	// discovery: https://indieauth.spec.indieweb.org/#redirect-url
 	return errors.New("redirect uri has different host from client id")
+}
+
+// ValidateTokenExchange validates the token exchange request according to the provided
+// authentication request and returns the authorization code and an error.
+func (s *Server) ValidateTokenExchange(request *AuthenticationRequest, r *http.Request) (string, error) {
+	if err := r.ParseForm(); err != nil {
+		return "", err
+	}
+
+	var (
+		grantType = r.Form.Get("grant_type")
+		code      = r.Form.Get("code")
+	)
+
+	if grantType == "" {
+		// Default to support legacy clients.
+		grantType = "authorization_code"
+	}
+
+	if grantType != "authorization_code" {
+		return "", ErrInvalidGrantType
+	}
+
+	var (
+		clientID     = r.Form.Get("client_id")
+		redirectURI  = r.Form.Get("redirect_uri")
+		codeVerifier = r.Form.Get("code_verifier")
+	)
+
+	if request.ClientID != clientID {
+		return "", ErrNoMatchClientID
+	}
+
+	if request.RedirectURI != redirectURI {
+		return "", ErrNoMatchRedirectURI
+	}
+
+	if request.CodeChallenge == "" {
+		if s.RequirePKCE {
+			return "", ErrPKCERequired
+		}
+	} else {
+		cc := request.CodeChallenge
+		ccm := request.CodeChallengeMethod
+		if !IsValidCodeChallengeMethod(ccm) {
+			return "", ErrInvalidCodeChallengeMethod
+		}
+
+		if !ValidateCodeChallenge(ccm, cc, codeVerifier) {
+			return "", ErrCodeChallengeFailed
+		}
+	}
+
+	return code, nil
 }
