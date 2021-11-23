@@ -120,24 +120,29 @@ func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 }
 
 // ValidateTokenExchange validates the token exchange request according to the provided
-// authentication request and returns the authorization code and an error.
-func (s *Server) ValidateTokenExchange(request *AuthenticationRequest, r *http.Request) (string, error) {
+// authentication request and returns an error.
+//
+// Please note that you need to fetch the authentication code yourself from the request.
+//
+//	_ = r.ParseForm()
+// 	code := r.Form.Get("code")
+//
+// The code was provided by you at a previous stage. Thus, you will need to use it to
+// rebuild the AuthenticationRequest data. The AuthenticationRequest does not need to have
+// the scope or state set for this validation.
+func (s *Server) ValidateTokenExchange(authRequest *AuthenticationRequest, r *http.Request) error {
 	if err := r.ParseForm(); err != nil {
-		return "", err
+		return err
 	}
 
-	var (
-		grantType = r.Form.Get("grant_type")
-		code      = r.Form.Get("code")
-	)
-
+	grantType := r.Form.Get("grant_type")
 	if grantType == "" {
 		// Default to support legacy clients.
 		grantType = "authorization_code"
 	}
 
 	if grantType != "authorization_code" {
-		return "", ErrInvalidGrantType
+		return ErrInvalidGrantType
 	}
 
 	var (
@@ -146,29 +151,29 @@ func (s *Server) ValidateTokenExchange(request *AuthenticationRequest, r *http.R
 		codeVerifier = r.Form.Get("code_verifier")
 	)
 
-	if request.ClientID != clientID {
-		return "", ErrNoMatchClientID
+	if authRequest.ClientID != clientID {
+		return ErrNoMatchClientID
 	}
 
-	if request.RedirectURI != redirectURI {
-		return "", ErrNoMatchRedirectURI
+	if authRequest.RedirectURI != redirectURI {
+		return ErrNoMatchRedirectURI
 	}
 
-	if request.CodeChallenge == "" {
+	if authRequest.CodeChallenge == "" {
 		if s.RequirePKCE {
-			return "", ErrPKCERequired
+			return ErrPKCERequired
 		}
 	} else {
-		cc := request.CodeChallenge
-		ccm := request.CodeChallengeMethod
+		cc := authRequest.CodeChallenge
+		ccm := authRequest.CodeChallengeMethod
 		if !IsValidCodeChallengeMethod(ccm) {
-			return "", ErrInvalidCodeChallengeMethod
+			return ErrInvalidCodeChallengeMethod
 		}
 
 		if !ValidateCodeChallenge(ccm, cc, codeVerifier) {
-			return "", ErrCodeChallengeFailed
+			return ErrCodeChallengeFailed
 		}
 	}
 
-	return code, nil
+	return nil
 }
