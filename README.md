@@ -12,9 +12,9 @@ Some examples:
 - As client:
   - Discover endpoints and generate redirect URL: https://github.com/hacdias/eagle/blob/f59b3b6fc290e30b8c999edac4b3feadc6c3d7b6/server/login.go#L134-L167
   - Validate callback data: https://github.com/hacdias/eagle/blob/f59b3b6fc290e30b8c999edac4b3feadc6c3d7b6/server/login.go#L169-L192
-- As server:
+- As server (a JWT token is used to store the information on the authorization code):
   - Parsing authorization request: https://github.com/hacdias/eagle/blob/f59b3b6fc290e30b8c999edac4b3feadc6c3d7b6/server/auth.go#L29-L46
-  - Validate the code challenge at the authorization endpoint: https://github.com/hacdias/eagle/blob/f59b3b6fc290e30b8c999edac4b3feadc6c3d7b6/server/auth.go#L262-L268
+  - Validate the code challenge at the authorization endpoint: https://github.com/hacdias/eagle/blob/58bce1373527b997edcac2387f0ee38328e13f10/server/auth.go#L154-L165
 
 ## License
 
