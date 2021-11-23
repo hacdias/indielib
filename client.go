@@ -2,8 +2,6 @@ package indieauth
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +12,12 @@ import (
 	"strings"
 
 	"golang.org/x/oauth2"
+)
+
+var (
+	ErrCodeNotFound  error = errors.New("code not found")
+	ErrStateNotFound error = errors.New("state not found")
+	ErrInvalidState  error = errors.New("state does not match")
 )
 
 type Client struct {
@@ -62,10 +66,7 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 	}
 
 	state := randString(20)
-	codeVerifier := randString(20)
-
-	sha256 := sha256.Sum256([]byte(codeVerifier))
-	cc := base64.URLEncoding.EncodeToString(sha256[:])
+	cc, cv := generateS256Challenge()
 
 	authURL := o.AuthCodeURL(
 		state,
@@ -78,7 +79,7 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 		Endpoints:    *endpoints,
 		Me:           profile,
 		State:        state,
-		CodeVerifier: codeVerifier,
+		CodeVerifier: cv,
 	}, authURL, nil
 }
 
@@ -87,16 +88,16 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 func (c *Client) ValidateCallback(i *AuthInfo, r *http.Request) (string, error) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		return "", errors.New("code query not found")
+		return "", ErrCodeNotFound
 	}
 
 	state := r.URL.Query().Get("state")
 	if state == "" {
-		return "", errors.New("state query not found")
+		return "", ErrStateNotFound
 	}
 
 	if state != i.State {
-		return "", errors.New("state does not match")
+		return "", ErrInvalidState
 	}
 
 	return code, nil
