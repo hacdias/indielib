@@ -3,7 +3,7 @@ module github.com/hacdias/indieauth
 go 1.17
 
 require (
-	golang.org/x/net v0.0.0-20211118161319-6a13c67c3ce4
+	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	willnorris.com/go/webmention v0.0.0-20211028201829-b0044f1a24d0
 )
