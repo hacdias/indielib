@@ -217,7 +217,7 @@ func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Conf
 	o := c.GetOAuth2(&i.Endpoints)
 
 	tok, err := o.Exchange(
-		context.Background(),
+		context.WithValue(context.Background(), oauth2.HTTPClient, c.Client),
 		code,
 		oauth2.SetAuthURLParam("client_id", c.ClientID),
 		oauth2.SetAuthURLParam("code_verifier", i.CodeVerifier),
