@@ -214,6 +214,10 @@ func ProfileFromToken(token *oauth2.Token) *Profile {
 // You can now use httpClient to make requests to, for example, a Micropub endpoint. They
 // are authenticated with token. See https://pkg.go.dev/golang.org/x/oauth2 for more details.
 func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Config, error) {
+	if i.Endpoints.Token == "" {
+		return nil, nil, ErrNoEndpointFound
+	}
+
 	o := c.GetOAuth2(&i.Endpoints)
 
 	tok, err := o.Exchange(
