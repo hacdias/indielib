@@ -18,7 +18,7 @@ func TestDiscoverEndpointsNoToken(t *testing.T) {
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
 					w.Header().Set("Link", `</auth>; rel="authorization_endpoint"`)
-					w.Write([]byte(`<html></html>`))
+					_, _ = w.Write([]byte(`<html></html>`))
 				}),
 			},
 		},
@@ -38,7 +38,7 @@ func TestDiscoverEndpointsNoAuthorization(t *testing.T) {
 			Transport: &handlerRoundTripper{
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
-					w.Write([]byte(`<html></html>`))
+					_, _ = w.Write([]byte(`<html></html>`))
 				}),
 			},
 		},
@@ -57,7 +57,7 @@ func TestDiscoverEndpointsHTTPLink(t *testing.T) {
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
 					w.Header().Set("Link", `</auth>; rel="authorization_endpoint", </token>; rel="token_endpoint"`)
-					w.Write([]byte(`<html></html>`))
+					_, _ = w.Write([]byte(`<html></html>`))
 				}),
 			},
 		},
@@ -77,7 +77,7 @@ func TestDiscoverEndpointsBody(t *testing.T) {
 			Transport: &handlerRoundTripper{
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
-					w.Write([]byte(`<html>
+					_, _ = w.Write([]byte(`<html>
 						<head>
 							<link rel="authorization_endpoint" href="/auth">
 							<link rel="token_endpoint" href="/token">
@@ -103,7 +103,7 @@ func TestDiscoverEndpointsMixed(t *testing.T) {
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
 					w.Header().Set("Link", `</auth>; rel="authorization_endpoint"`)
-					w.Write([]byte(`<html>
+					_, _ = w.Write([]byte(`<html>
 						<head>
 							<link rel="token_endpoint" href="/token">
 						</head>
@@ -128,7 +128,7 @@ func TestDiscoverEndpointsUsesFirst(t *testing.T) {
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
 					w.Header().Set("Link", `</auth>; rel="authorization_endpoint"`)
-					w.Write([]byte(`<html>
+					_, _ = w.Write([]byte(`<html>
 						<head>
 							<link rel="authorization_endpoint" href="/not/first">
 							<link rel="token_endpoint" href="/token">
@@ -158,7 +158,7 @@ func TestDiscoverEndpointsHead(t *testing.T) {
 					if r.Method == http.MethodHead {
 						w.WriteHeader(http.StatusOK)
 					} else {
-						w.Write([]byte(`<html>
+						_, _ = w.Write([]byte(`<html>
 							<head>
 								<link rel="authorization_endpoint" href="/not/first">
 								<link rel="token_endpoint" href="/token">
