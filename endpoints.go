@@ -34,10 +34,17 @@ func (s *Client) DiscoverEndpoints(urlStr string) (*Endpoints, error) {
 		return nil, err
 	}
 
-	return &Endpoints{
-		Authorization: urls[0],
-		Token:         urls[1],
-	}, nil
+	endpoints := &Endpoints{
+		Authorization: urls[0].value,
+		Token:         urls[1].value,
+	}
+
+	// Authorization is mandatory!
+	if urls[0].err != nil {
+		return nil, urls[0].err
+	}
+
+	return endpoints, nil
 }
 
 // DiscoverEndpoint discovers as given endpoint identified by rel.
@@ -47,103 +54,130 @@ func (s *Client) DiscoverEndpoint(urlStr, rel string) (string, error) {
 		return "", err
 	}
 
-	return urls[0], nil
+	return urls[0].value, urls[0].err
 }
 
-func (s *Client) discoverEndpoints(urlStr string, rels ...string) ([]string, error) {
-	headEndpoints, err := s.discoverRequest(http.MethodHead, urlStr, rels...)
-	if err == nil && headEndpoints != nil {
+type endpointRequest struct {
+	value string
+	err   error
+}
+
+func (s *Client) discoverEndpoints(urlStr string, rels ...string) ([]*endpointRequest, error) {
+	headEndpoints, found, err := s.discoverRequest(http.MethodHead, urlStr, rels...)
+	if err == nil && headEndpoints != nil && found {
 		return headEndpoints, nil
 	}
 
-	getEndpoints, err := s.discoverRequest(http.MethodGet, urlStr, rels...)
-	if err == nil && getEndpoints != nil {
+	getEndpoints, found, err := s.discoverRequest(http.MethodGet, urlStr, rels...)
+	if err == nil && getEndpoints != nil && found {
 		return getEndpoints, nil
 	}
 
-	return nil, err
+	endpoints := make([]*endpointRequest, len(rels))
+	for i := range endpoints {
+		if headEndpoints[i].err == nil {
+			endpoints[i] = headEndpoints[i]
+		} else {
+			endpoints[i] = getEndpoints[i]
+		}
+	}
+	return endpoints, err
 }
 
-func (s *Client) discoverRequest(method, urlStr string, rels ...string) ([]string, error) {
+func (s *Client) discoverRequest(method, urlStr string, rels ...string) ([]*endpointRequest, bool, error) {
 	req, err := http.NewRequest(method, urlStr, nil)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer resp.Body.Close()
 
 	if code := resp.StatusCode; code < 200 || 300 <= code {
-		return nil, fmt.Errorf("response error: %v", resp.StatusCode)
+		return nil, false, fmt.Errorf("response error: %v", resp.StatusCode)
 	}
 
-	endpoints, err := extractEndpoints(resp, rels...)
+	endpoints, found, err := extractEndpoints(resp, rels...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	urls, err := resolveReferences(resp.Request.URL.String(), endpoints...)
+	err = resolveReferences(resp.Request.URL.String(), endpoints...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return urls, nil
+	return endpoints, found, nil
 }
 
-func extractEndpoints(resp *http.Response, rels ...string) ([]string, error) {
+func extractEndpoints(resp *http.Response, rels ...string) ([]*endpointRequest, bool, error) {
 	// first check http link headers
-	if endpoints, err := httpLink(resp.Header, rels...); err == nil {
-		return endpoints, nil
+	httpEndpoints, found := httpLink(resp.Header, rels...)
+	if found {
+		return httpEndpoints, true, nil
 	}
 
 	// then look in the HTML body
-	endpoints, err := htmlLink(resp.Body, rels...)
+	htmlEndpoints, _, err := htmlLink(resp.Body, rels...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return endpoints, nil
+
+	endpoints := make([]*endpointRequest, len(rels))
+	matched := 0
+	for i := range endpoints {
+		if httpEndpoints[i].err == nil {
+			endpoints[i] = httpEndpoints[i]
+		} else {
+			endpoints[i] = htmlEndpoints[i]
+		}
+		if endpoints[i].err == nil {
+			matched++
+		}
+	}
+	return endpoints, matched == len(rels), nil
 }
 
 // httpLink parses headers and returns the URL of the first link that contains a rel value.
-func httpLink(headers http.Header, rels ...string) ([]string, error) {
-	links := make([]string, len(rels))
-	found := make([]bool, len(rels))
+func httpLink(headers http.Header, rels ...string) ([]*endpointRequest, bool) {
+	links := make([]*endpointRequest, len(rels))
 	matched := 0
 
 	for _, h := range header.ParseList(headers, "Link") {
 		link := header.ParseLink(h)
 		for _, v := range link.Rel {
 			for i, rel := range rels {
-				if v == rel && !found[i] {
-					links[i] = link.Href
-					found[i] = true
+				if v == rel && links[i] == nil {
+					links[i] = &endpointRequest{value: link.Href}
 					matched++
-
-					if matched == len(rels) {
-						return links, nil
-					}
 				}
 			}
 		}
 	}
 
-	return nil, ErrNoEndpointFound
+	for i := range links {
+		if links[i] == nil {
+			links[i] = &endpointRequest{err: ErrNoEndpointFound}
+		}
+	}
+
+	return links, matched == len(links)
 }
 
 // htmlLink parses r as HTML and returns the URLs of the first link that
 // contains the rels values. HTML <link> elements are preferred, falling back
 // to <a> elements if no rel <link> elements are found.
-func htmlLink(r io.Reader, rels ...string) ([]string, error) {
+func htmlLink(r io.Reader, rels ...string) ([]*endpointRequest, bool, error) {
 	doc, err := html.Parse(r)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	var f func(n *html.Node, targetRel string) (string, error)
-	f = func(n *html.Node, targetRel string) (string, error) {
+	var f func(n *html.Node, targetRel string) *endpointRequest
+	f = func(n *html.Node, targetRel string) *endpointRequest {
 		if n.Type == html.ElementNode {
 			if n.DataAtom == atom.Link || n.DataAtom == atom.A {
 				var href, rel string
@@ -161,46 +195,48 @@ func htmlLink(r io.Reader, rels ...string) ([]string, error) {
 				if hrefFound && relFound {
 					for _, v := range strings.Split(rel, " ") {
 						if v == targetRel {
-							return href, nil
+							return &endpointRequest{value: href}
 						}
 					}
 				}
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if link, err := f(c, targetRel); err == nil {
-				return link, nil
+			if link := f(c, targetRel); link.err == nil {
+				return link
 			}
 		}
-		return "", ErrNoEndpointFound
+		return &endpointRequest{err: ErrNoEndpointFound}
 	}
 
-	links := make([]string, len(rels))
+	links := make([]*endpointRequest, len(rels))
+	matched := 0
 	for i, rel := range rels {
-		links[i], err = f(doc, rel)
-		if err != nil {
-			return nil, err
+		links[i] = f(doc, rel)
+		if links[i].err == nil {
+			matched++
 		}
 	}
 
-	return links, nil
+	return links, matched == len(rels), nil
 }
 
 // resolveReferences resolves each URL in refs into an absolute URL relative to
 // base. If base or one of the values in refs is not a valid URL, an error is returned.
-func resolveReferences(base string, refs ...string) ([]string, error) {
+func resolveReferences(base string, refs ...*endpointRequest) error {
 	b, err := url.Parse(base)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var urls []string
 	for _, r := range refs {
-		u, err := url.Parse(r)
-		if err != nil {
-			return nil, err
+		if r.err == nil {
+			u, err := url.Parse(r.value)
+			if err != nil {
+				return err
+			}
+			r.value = b.ResolveReference(u).String()
 		}
-		urls = append(urls, b.ResolveReference(u).String())
 	}
-	return urls, nil
+	return nil
 }
