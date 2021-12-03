@@ -26,8 +26,11 @@ func TestDiscoverEndpointsNoToken(t *testing.T) {
 
 	endpoints, err := client.DiscoverEndpoints("https://example.org/")
 	assert.Nil(t, err)
-	assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-	assert.EqualValues(t, "", endpoints.Token)
+	assert.NotNil(t, endpoints)
+	if endpoints != nil {
+		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
+		assert.EqualValues(t, "", endpoints.Token)
+	}
 }
 
 func TestDiscoverEndpointsNoAuthorization(t *testing.T) {
@@ -65,8 +68,11 @@ func TestDiscoverEndpointsHTTPLink(t *testing.T) {
 
 	endpoints, err := client.DiscoverEndpoints("https://example.org/")
 	assert.Nil(t, err)
-	assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-	assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	assert.NotNil(t, endpoints)
+	if endpoints != nil {
+		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
+		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	}
 }
 
 func TestDiscoverEndpointsBody(t *testing.T) {
@@ -90,8 +96,11 @@ func TestDiscoverEndpointsBody(t *testing.T) {
 
 	endpoints, err := client.DiscoverEndpoints("https://example.org/")
 	assert.Nil(t, err)
-	assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-	assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	assert.NotNil(t, endpoints)
+	if endpoints != nil {
+		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
+		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	}
 }
 
 func TestDiscoverEndpointsMixed(t *testing.T) {
@@ -115,8 +124,11 @@ func TestDiscoverEndpointsMixed(t *testing.T) {
 
 	endpoints, err := client.DiscoverEndpoints("https://example.org/")
 	assert.Nil(t, err)
-	assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-	assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	assert.NotNil(t, endpoints)
+	if endpoints != nil {
+		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
+		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	}
 }
 
 func TestDiscoverEndpointsUsesFirst(t *testing.T) {
@@ -141,8 +153,11 @@ func TestDiscoverEndpointsUsesFirst(t *testing.T) {
 
 	endpoints, err := client.DiscoverEndpoints("https://example.org/")
 	assert.Nil(t, err)
-	assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-	assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	assert.NotNil(t, endpoints)
+	if endpoints != nil {
+		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
+		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	}
 }
 
 func TestDiscoverEndpointsHead(t *testing.T) {
@@ -172,8 +187,11 @@ func TestDiscoverEndpointsHead(t *testing.T) {
 
 	endpoints, err := client.DiscoverEndpoints("https://example.org/")
 	assert.Nil(t, err)
-	assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-	assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	assert.NotNil(t, endpoints)
+	if endpoints != nil {
+		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
+		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+	}
 }
 
 func TestDiscoverEndpointExists(t *testing.T) {
