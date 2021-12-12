@@ -63,25 +63,31 @@ type endpointRequest struct {
 }
 
 func (s *Client) discoverEndpoints(urlStr string, rels ...string) ([]*endpointRequest, error) {
-	headEndpoints, found, err := s.discoverRequest(http.MethodHead, urlStr, rels...)
-	if err == nil && headEndpoints != nil && found {
+	headEndpoints, found, errHead := s.discoverRequest(http.MethodHead, urlStr, rels...)
+	if errHead == nil && headEndpoints != nil && found {
 		return headEndpoints, nil
 	}
 
-	getEndpoints, found, err := s.discoverRequest(http.MethodGet, urlStr, rels...)
-	if err == nil && getEndpoints != nil && found {
+	getEndpoints, found, errGet := s.discoverRequest(http.MethodGet, urlStr, rels...)
+	if errGet == nil && getEndpoints != nil && found {
 		return getEndpoints, nil
+	}
+
+	if errHead != nil && errGet != nil {
+		return nil, errGet
 	}
 
 	endpoints := make([]*endpointRequest, len(rels))
 	for i := range endpoints {
-		if headEndpoints[i].err == nil {
+		if errHead == nil && headEndpoints[i].err == nil {
 			endpoints[i] = headEndpoints[i]
-		} else {
+		} else if errGet == nil && getEndpoints[i].err == nil {
 			endpoints[i] = getEndpoints[i]
+		} else {
+			endpoints[i] = &endpointRequest{err: ErrNoEndpointFound}
 		}
 	}
-	return endpoints, err
+	return endpoints, nil
 }
 
 func (s *Client) discoverRequest(method, urlStr string, rels ...string) ([]*endpointRequest, bool, error) {
