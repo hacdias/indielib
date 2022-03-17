@@ -18,6 +18,7 @@ var (
 	ErrCodeNotFound  error = errors.New("code not found")
 	ErrStateNotFound error = errors.New("state not found")
 	ErrInvalidState  error = errors.New("state does not match")
+	ErrInvalidIssuer error = errors.New("issuer does not match")
 )
 
 // Client is a IndieAuth client. As a client, you want to authenticate other users
@@ -87,6 +88,7 @@ func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
 
 type AuthInfo struct {
 	Endpoints
+	Metadata
 	Me           string
 	State        string
 	CodeVerifier string
@@ -173,6 +175,14 @@ func (c *Client) ValidateCallback(i *AuthInfo, r *http.Request) (string, error) 
 
 	if state != i.State {
 		return "", ErrInvalidState
+	}
+
+	// If the issuer is not defined on the metadata, it means that the server does
+	// not comply with the newer revision of IndieAuth. In that case, both the metadata
+	// issuer and the "iss" should be empty. This should be backwards compatible.
+	issuer := r.URL.Query().Get("iss")
+	if issuer != i.Issuer {
+		return "", ErrInvalidIssuer
 	}
 
 	return code, nil
