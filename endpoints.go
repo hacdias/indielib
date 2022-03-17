@@ -15,6 +15,7 @@ import (
 const (
 	AuthorizationEndpointRel string = "authorization_endpoint"
 	TokenEndpointRel         string = "token_endpoint"
+	IndieAuthMetadataRel     string = "indieauth-metadata"
 )
 
 type Endpoints struct {
@@ -29,6 +30,16 @@ var ErrNoEndpointFound = fmt.Errorf("no endpoint found")
 // DiscoverEndpoints discovers the authorization and token endpoints for the provided URL.
 // This code is partially based on https://github.com/willnorris/webmention/blob/main/webmention.go.
 func (s *Client) DiscoverEndpoints(urlStr string) (*Endpoints, error) {
+	metadata, err := s.FetchMetadata(urlStr)
+	if err == nil {
+		return &Endpoints{
+			Authorization: metadata.AuthorizationEndpoint,
+			Token:         metadata.TokenEndpoint,
+		}, nil
+	}
+
+	// This part is kept as means of backwards compatibility with IndieAuth revision from
+	// 26 November 2020: https://indieauth.spec.indieweb.org/20201126/#discovery-by-clients
 	urls, err := s.discoverEndpoints(urlStr, AuthorizationEndpointRel, TokenEndpointRel)
 	if err != nil {
 		return nil, err
