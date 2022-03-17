@@ -87,7 +87,6 @@ func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
 }
 
 type AuthInfo struct {
-	Endpoints
 	Metadata
 	Me           string
 	State        string
@@ -128,7 +127,7 @@ type Metadata struct {
 // The returned AuthInfo should be stored by the caller of this function in such a way that it
 // can be retrieved to validate the callback.
 func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) {
-	endpoints, err := c.DiscoverEndpoints(profile)
+	metadata, err := c.DiscoverMetadata(profile)
 	if err != nil {
 		return nil, "", err
 	}
@@ -137,8 +136,8 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 		ClientID:    c.ClientID,
 		RedirectURL: c.RedirectURL,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  endpoints.Authorization,
-			TokenURL: endpoints.Token,
+			AuthURL:  metadata.AuthorizationEndpoint,
+			TokenURL: metadata.TokenEndpoint,
 		},
 	}
 
@@ -153,7 +152,7 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 	)
 
 	return &AuthInfo{
-		Endpoints:    *endpoints,
+		Metadata:     *metadata,
 		Me:           profile,
 		State:        state,
 		CodeVerifier: cv,
@@ -241,11 +240,11 @@ func ProfileFromToken(token *oauth2.Token) *Profile {
 // You can now use httpClient to make requests to, for example, a Micropub endpoint. They
 // are authenticated with token. See https://pkg.go.dev/golang.org/x/oauth2 for more details.
 func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Config, error) {
-	if i.Endpoints.Token == "" {
+	if i.TokenEndpoint == "" {
 		return nil, nil, ErrNoEndpointFound
 	}
 
-	o := c.GetOAuth2(&i.Endpoints)
+	o := c.GetOAuth2(&i.Metadata)
 
 	tok, err := o.Exchange(
 		context.WithValue(context.Background(), oauth2.HTTPClient, c.Client),
@@ -261,13 +260,13 @@ func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Conf
 
 // GetOAuth2 returns an oauth2.Config based on the given endpoints. This can be used
 // to get an http.Client See https://pkg.go.dev/golang.org/x/oauth2 for more details.
-func (c *Client) GetOAuth2(e *Endpoints) *oauth2.Config {
+func (c *Client) GetOAuth2(m *Metadata) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:    c.ClientID,
 		RedirectURL: c.RedirectURL,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  e.Authorization,
-			TokenURL: e.Token,
+			AuthURL:  m.AuthorizationEndpoint,
+			TokenURL: m.TokenEndpoint,
 		},
 	}
 }
@@ -286,7 +285,7 @@ func (c *Client) FetchProfile(i *AuthInfo, code string) (*Profile, error) {
 		"code_verifier": {i.CodeVerifier},
 	}
 
-	r, err := http.NewRequest("POST", i.Authorization, strings.NewReader(v.Encode()))
+	r, err := http.NewRequest("POST", i.AuthorizationEndpoint, strings.NewReader(v.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -316,42 +315,4 @@ func (c *Client) FetchProfile(i *AuthInfo, code string) (*Profile, error) {
 	}
 
 	return profile, nil
-}
-
-// FetchMetadata fetches the server's metadata information as described in the
-// specification: https://indieauth.spec.indieweb.org/#discovery-by-clients
-func (c *Client) FetchMetadata(urlStr string) (*Metadata, error) {
-	metadataUrl, err := c.DiscoverEndpoint(urlStr, IndieAuthMetadataRel)
-	if err != nil {
-		return nil, err
-	}
-
-	r, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
-	if err != nil {
-		return nil, err
-	}
-	r.Header.Add("Accept", "application/json")
-
-	res, err := c.Client.Do(r)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)
-	}
-
-	var metadata *Metadata
-	err = json.Unmarshal(data, &metadata)
-	if err != nil {
-		return nil, err
-	}
-
-	return metadata, nil
 }

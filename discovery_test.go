@@ -9,7 +9,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDiscoverEndpointsNoToken(t *testing.T) {
+func TestDiscoverMetadata(t *testing.T) {
+	client := NewClient(
+		"https://example.com/",
+		"https://example.com/redirect",
+		&http.Client{
+			Transport: &handlerRoundTripper{
+				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.Path == "/metadata" {
+						w.Header().Set("Content-Type", "application/json; charset=utf-8")
+						_, _ = w.Write([]byte(`{
+							"issuer": "https://example.org/",
+							"authorization_endpoint": "https://example.org/auth",
+							"token_endpoint": "https://example.org/token"
+						}`))
+						return
+					}
+
+					w.Header().Set("Content-Type", "text/html; charset=utf-8")
+					w.Header().Set("Link", `</metadata>; rel="indieauth-metadata"`)
+					_, _ = w.Write([]byte(`<html></html>`))
+				}),
+			},
+		},
+	)
+
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	assert.Nil(t, err)
+	assert.NotNil(t, endpoints)
+	if endpoints != nil {
+		assert.EqualValues(t, "https://example.org/", endpoints.Issuer)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
+	}
+}
+
+func TestDiscoverMetadataNoToken(t *testing.T) {
 	client := NewClient(
 		"https://example.com/",
 		"https://example.com/redirect",
@@ -24,16 +59,16 @@ func TestDiscoverEndpointsNoToken(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "", endpoints.TokenEndpoint)
 	}
 }
 
-func TestDiscoverEndpointsNoAuthorization(t *testing.T) {
+func TestDiscoverMetadataNoAuthorization(t *testing.T) {
 	client := NewClient(
 		"https://example.com/",
 		"https://example.com/redirect",
@@ -47,11 +82,11 @@ func TestDiscoverEndpointsNoAuthorization(t *testing.T) {
 		},
 	)
 
-	_, err := client.DiscoverEndpoints("https://example.org/")
+	_, err := client.DiscoverMetadata("https://example.org/")
 	assert.EqualValues(t, err, ErrNoEndpointFound)
 }
 
-func TestDiscoverEndpointsHTTPLink(t *testing.T) {
+func TestDiscoverMetadataHTTPLink(t *testing.T) {
 	client := NewClient(
 		"https://example.com/",
 		"https://example.com/redirect",
@@ -66,16 +101,16 @@ func TestDiscoverEndpointsHTTPLink(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
 	}
 }
 
-func TestDiscoverEndpointsBody(t *testing.T) {
+func TestDiscoverMetadataBody(t *testing.T) {
 	client := NewClient(
 		"https://example.com/",
 		"https://example.com/redirect",
@@ -94,16 +129,16 @@ func TestDiscoverEndpointsBody(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
 	}
 }
 
-func TestDiscoverEndpointsMixed(t *testing.T) {
+func TestDiscoverMetadataMixed(t *testing.T) {
 	client := NewClient(
 		"https://example.com/",
 		"https://example.com/redirect",
@@ -122,16 +157,16 @@ func TestDiscoverEndpointsMixed(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
 	}
 }
 
-func TestDiscoverEndpointsUsesFirst(t *testing.T) {
+func TestDiscoverMetadataUsesFirst(t *testing.T) {
 	client := NewClient(
 		"https://example.com/",
 		"https://example.com/redirect",
@@ -151,16 +186,16 @@ func TestDiscoverEndpointsUsesFirst(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
 	}
 }
 
-func TestDiscoverEndpointsHead(t *testing.T) {
+func TestDiscoverMetadataHead(t *testing.T) {
 	client := NewClient(
 		"https://example.com/",
 		"https://example.com/redirect",
@@ -185,12 +220,12 @@ func TestDiscoverEndpointsHead(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "https://example.org/token", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
 	}
 }
 
@@ -209,7 +244,7 @@ func TestDiscoverEndpointExists(t *testing.T) {
 		},
 	)
 
-	endpoint, err := client.DiscoverEndpoint("https://example.org/", "test")
+	endpoint, err := client.DiscoverLinkEndpoint("https://example.org/", "test")
 	assert.Nil(t, err)
 	assert.EqualValues(t, "https://example.org/", endpoint)
 }
@@ -228,7 +263,7 @@ func TestDiscoverEndpointNotExists(t *testing.T) {
 		},
 	)
 
-	_, err := client.DiscoverEndpoint("https://example.org/", "test")
+	_, err := client.DiscoverLinkEndpoint("https://example.org/", "test")
 	assert.EqualValues(t, err, ErrNoEndpointFound)
 }
 
@@ -255,12 +290,12 @@ func TestDiscoverEndpointHeadErrors(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "", endpoints.TokenEndpoint)
 	}
 }
 
@@ -284,12 +319,12 @@ func TestDiscoverEndpointGetErrors(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
-		assert.EqualValues(t, "https://example.org/auth", endpoints.Authorization)
-		assert.EqualValues(t, "", endpoints.Token)
+		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
+		assert.EqualValues(t, "", endpoints.TokenEndpoint)
 	}
 }
 
@@ -307,7 +342,7 @@ func TestDiscoverEndpointHeadGetError(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverEndpoints("https://example.org/")
+	endpoints, err := client.DiscoverMetadata("https://example.org/")
 	assert.NotNil(t, err)
 	assert.Nil(t, endpoints)
 }

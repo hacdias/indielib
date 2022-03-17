@@ -1,8 +1,10 @@
 package indieauth
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -18,36 +20,29 @@ const (
 	IndieAuthMetadataRel     string = "indieauth-metadata"
 )
 
-type Endpoints struct {
-	Authorization string
-	Token         string
-}
-
 // ErrNoEndpointFound is returned when no endpoint can be found for a certain
 // target URL.
 var ErrNoEndpointFound = fmt.Errorf("no endpoint found")
 
-// DiscoverEndpoints discovers the authorization and token endpoints for the provided URL.
-// This code is partially based on https://github.com/willnorris/webmention/blob/main/webmention.go.
-func (s *Client) DiscoverEndpoints(urlStr string) (*Endpoints, error) {
-	metadata, err := s.FetchMetadata(urlStr)
+// DiscoverMetadata discovers the IndieAuth metadata of the provided URL, such as the authorization
+// and token endpoints. This code is partially based on https://github.com/willnorris/webmention/blob/main/webmention.go.
+func (c *Client) DiscoverMetadata(urlStr string) (*Metadata, error) {
+	metadata, err := c.discoverMetadata(urlStr)
 	if err == nil {
-		return &Endpoints{
-			Authorization: metadata.AuthorizationEndpoint,
-			Token:         metadata.TokenEndpoint,
-		}, nil
+		return metadata, nil
 	}
 
 	// This part is kept as means of backwards compatibility with IndieAuth revision from
 	// 26 November 2020: https://indieauth.spec.indieweb.org/20201126/#discovery-by-clients
-	urls, err := s.discoverEndpoints(urlStr, AuthorizationEndpointRel, TokenEndpointRel)
+	urls, err := c.discoverEndpoints(urlStr, AuthorizationEndpointRel, TokenEndpointRel)
 	if err != nil {
 		return nil, err
 	}
 
-	endpoints := &Endpoints{
-		Authorization: urls[0].value,
-		Token:         urls[1].value,
+	endpoints := &Metadata{
+		AuthorizationEndpoint: urls[0].value,
+		TokenEndpoint:         urls[1].value,
+		RevocationEndpoint:    urls[1].value,
 	}
 
 	// Authorization is mandatory!
@@ -58,9 +53,47 @@ func (s *Client) DiscoverEndpoints(urlStr string) (*Endpoints, error) {
 	return endpoints, nil
 }
 
-// DiscoverEndpoint discovers as given endpoint identified by rel.
-func (s *Client) DiscoverEndpoint(urlStr, rel string) (string, error) {
-	urls, err := s.discoverEndpoints(urlStr, rel)
+// discoverMetadata fetches the server's metadata information as described in the
+// specification: https://indieauth.spec.indieweb.org/#discovery-by-clients
+func (c *Client) discoverMetadata(urlStr string) (*Metadata, error) {
+	metadataUrl, err := c.DiscoverLinkEndpoint(urlStr, IndieAuthMetadataRel)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	r.Header.Add("Accept", "application/json")
+
+	res, err := c.Client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)
+	}
+
+	var metadata *Metadata
+	err = json.Unmarshal(data, &metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return metadata, nil
+}
+
+// DiscoverLinkEndpoint discovers as given endpoint identified by rel.
+func (c *Client) DiscoverLinkEndpoint(urlStr, rel string) (string, error) {
+	urls, err := c.discoverEndpoints(urlStr, rel)
 	if err != nil {
 		return "", err
 	}
@@ -101,13 +134,13 @@ func (s *Client) discoverEndpoints(urlStr string, rels ...string) ([]*endpointRe
 	return endpoints, nil
 }
 
-func (s *Client) discoverRequest(method, urlStr string, rels ...string) ([]*endpointRequest, bool, error) {
+func (c *Client) discoverRequest(method, urlStr string, rels ...string) ([]*endpointRequest, bool, error) {
 	req, err := http.NewRequest(method, urlStr, nil)
 	if err != nil {
 		return nil, false, err
 	}
 
-	resp, err := s.Client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, false, err
 	}
