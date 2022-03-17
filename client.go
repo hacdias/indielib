@@ -102,6 +102,23 @@ type Profile struct {
 	} `json:"profile"`
 }
 
+type Metadata struct {
+	Issuer                                     string   `json:"issuer"`
+	AuthorizationEndpoint                      string   `json:"authorization_endpoint"`
+	TokenEndpoint                              string   `json:"token_endpoint"`
+	IntrospectionEndpoint                      string   `json:"introspection_endpoint"`
+	IntrospectionEndpointAuthMethodsSupported  []string `json:"introspection_endpoint_auth_methods_supported"`
+	RevocationEndpoint                         string   `json:"revocation_endpoint"`
+	RevocationEndpointAuthMethodsSupported     []string `json:"revocation_endpoint_auth_methods_supported"`
+	ScopesSupported                            []string `json:"scopes_supported"`
+	ResponseTypesSupported                     []string `json:"response_types_supported"`
+	GrantTypesSupported                        []string `json:"grant_types_supported"`
+	ServiceDocumentation                       []string `json:"service_documentation"`
+	CodeChallengeMethodsSupported              []string `json:"code_challenge_methods_supported"`
+	AuthorizationResponseIssParameterSupported bool     `json:"authorization_response_iss_parameter_supported"`
+	UserInfoEndpoint                           string   `json:"userinfo_endpoint"`
+}
+
 // Authenticate takes a profile URL and the desired scope, discovers the required endpoints,
 // generates a random scope and code challenge (using method SHA256), and builds the authorization
 // URL. It returns the authorization info, redirect URI and an error.
@@ -289,4 +306,42 @@ func (c *Client) FetchProfile(i *AuthInfo, code string) (*Profile, error) {
 	}
 
 	return profile, nil
+}
+
+// FetchMetadata fetches the server's metadata information as described in the
+// specification: https://indieauth.spec.indieweb.org/#discovery-by-clients
+func (c *Client) FetchMetadata(urlStr string) (*Metadata, error) {
+	metadataUrl, err := c.DiscoverEndpoint(urlStr, IndieAuthMetadataRel)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	r.Header.Add("Accept", "application/json")
+
+	res, err := c.Client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)
+	}
+
+	var metadata *Metadata
+	err = json.Unmarshal(data, &metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return metadata, nil
 }
