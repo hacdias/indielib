@@ -6,16 +6,15 @@ import (
 	"strings"
 )
 
-var (
-	codeChallengeMethods = []string{
-		"plain", "S256",
-	}
-)
+// CodeChallengeMethods are the code challenge methods that are supported by this package.
+var CodeChallengeMethods = []string{
+	"plain", "S256",
+}
 
 // IsValidCodeChallengeMethod returns whether the provided code challenge method
 // is or is not valid.
 func IsValidCodeChallengeMethod(ccm string) bool {
-	return containsString(codeChallengeMethods, ccm)
+	return containsString(CodeChallengeMethods, ccm)
 }
 
 // ValidateCodeChallenge validates a code challenge against it code verifier. Right now,
