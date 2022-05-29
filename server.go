@@ -16,7 +16,7 @@ var (
 	ErrPKCERequired               error = errors.New("pkce is required, not provided")
 	ErrCodeChallengeFailed        error = errors.New("code challenge failed")
 	ErrInvalidResponseType        error = errors.New("response_type must be code")
-	ErrWrongCodeChallengeLenght   error = errors.New("code_challenge length must be between 43 and 128 charachters long")
+	ErrWrongCodeChallengeLenght   error = errors.New("code_challenge length must be between 43 and 128 characters long")
 )
 
 type Server struct {
@@ -161,9 +161,8 @@ func (s *Server) ValidateTokenExchange(authRequest *AuthenticationRequest, r *ht
 	}
 
 	var (
-		clientID     = r.Form.Get("client_id")
-		redirectURI  = r.Form.Get("redirect_uri")
-		codeVerifier = r.Form.Get("code_verifier")
+		clientID    = r.Form.Get("client_id")
+		redirectURI = r.Form.Get("redirect_uri")
 	)
 
 	if authRequest.ClientID != clientID {
@@ -179,7 +178,14 @@ func (s *Server) ValidateTokenExchange(authRequest *AuthenticationRequest, r *ht
 			return ErrPKCERequired
 		}
 	} else {
+		codeVerifier := r.Form.Get("code_verifier")
+		if len(codeVerifier) < 43 || len(codeVerifier) > 128 {
+			return errors.New("code_verifier length must be between 43 and 128 characters long") // RFC 7636, section 4.1.
+		}
 		cc := authRequest.CodeChallenge
+		if len(cc) < 43 || len(cc) > 128 {
+			return ErrWrongCodeChallengeLenght // RFC 7636, section 4.2.
+		}
 		ccm := authRequest.CodeChallengeMethod
 		if !IsValidCodeChallengeMethod(ccm) {
 			return ErrInvalidCodeChallengeMethod
