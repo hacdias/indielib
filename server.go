@@ -16,7 +16,8 @@ var (
 	ErrPKCERequired               error = errors.New("pkce is required, not provided")
 	ErrCodeChallengeFailed        error = errors.New("code challenge failed")
 	ErrInvalidResponseType        error = errors.New("response_type must be code")
-	ErrWrongCodeChallengeLenght   error = errors.New("code_challenge length must be between 43 and 128 characters long")
+	ErrWrongCodeVerifierLength    error = errors.New("code_verifier length must be between 43 and 128 characters long")  // RFC 7636, section 4.1
+	ErrWrongCodeChallengeLength   error = errors.New("code_challenge length must be between 43 and 128 characters long") // RFC 7636, section 4.2
 )
 
 type Server struct {
@@ -84,7 +85,7 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 	cc = r.Form.Get("code_challenge")
 	if cc != "" {
 		if len(cc) < 43 || len(cc) > 128 {
-			return nil, ErrWrongCodeChallengeLenght
+			return nil, ErrWrongCodeChallengeLength
 		}
 
 		ccm = r.Form.Get("code_challenge_method")
@@ -180,11 +181,11 @@ func (s *Server) ValidateTokenExchange(authRequest *AuthenticationRequest, r *ht
 	} else {
 		codeVerifier := r.Form.Get("code_verifier")
 		if len(codeVerifier) < 43 || len(codeVerifier) > 128 {
-			return errors.New("code_verifier length must be between 43 and 128 characters long") // RFC 7636, section 4.1.
+			return ErrWrongCodeVerifierLength
 		}
 		cc := authRequest.CodeChallenge
 		if len(cc) < 43 || len(cc) > 128 {
-			return ErrWrongCodeChallengeLenght // RFC 7636, section 4.2.
+			return ErrWrongCodeChallengeLength
 		}
 		ccm := authRequest.CodeChallengeMethod
 		if !IsValidCodeChallengeMethod(ccm) {

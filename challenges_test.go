@@ -22,13 +22,13 @@ func TestS256Challenge(t *testing.T) {
 		t.Fatal("newVerifier:", err)
 	}
 	if len(cv) < 43 || len(cv) > 128 {
-		t.Fatal("code_verifier length must be between 43 and 128 characters long") // RFC 7636, section 4.1.
+		t.Fatal(ErrWrongCodeVerifierLength)
 	}
 	cc := s256Challenge(cv)
 	if got, want := len(cc), s256ChallengeLength; got != want {
 		err := fmt.Errorf("S256 challenge length is %d, want %d", got, want)
 		if len(cc) < 43 || len(cc) > 128 {
-			err = ErrWrongCodeChallengeLenght // RFC 7636, section 4.2.
+			err = ErrWrongCodeChallengeLength
 		}
 		t.Fatal(err)
 	}
