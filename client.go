@@ -2,6 +2,8 @@ package indieauth
 
 import (
 	"context"
+	cryptorand "crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -141,14 +143,20 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 		},
 	}
 
-	state := randString(20)
-	cc, cv := generateS256Challenge()
+	state, err := newState()
+	if err != nil {
+		return nil, "", err
+	}
+	cv, err := newVerifier()
+	if err != nil {
+		return nil, "", err
+	}
 
 	authURL := o.AuthCodeURL(
 		state,
 		oauth2.SetAuthURLParam("scope", scope),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
-		oauth2.SetAuthURLParam("code_challenge", cc),
+		oauth2.SetAuthURLParam("code_challenge", s256Challenge(cv)),
 	)
 
 	return &AuthInfo{
@@ -157,6 +165,18 @@ func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) 
 		State:        state,
 		CodeVerifier: cv,
 	}, authURL, nil
+}
+
+// newState generates a new state value.
+func newState() (string, error) {
+	// OAuth 2.0 requires state to be printable ASCII, so base64 fits.
+	// See https://datatracker.ietf.org/doc/html/rfc6749#appendix-A.5.
+	b := make([]byte, 64)
+	_, err := cryptorand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 // ValidateCallback validates the callback request by checking if the code exists
