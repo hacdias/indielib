@@ -1,4 +1,4 @@
-module github.com/hacdias/indieauth/v2
+module github.com/hacdias/indieauth/v3
 
 go 1.19
 
