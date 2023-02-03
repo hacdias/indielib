@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/stretchr/testify v1.8.0
-	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458
-	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1
+	golang.org/x/net v0.5.0
+	golang.org/x/oauth2 v0.4.0
 	willnorris.com/go/webmention v0.0.0-20220108183051-4a23794272f0
 )
 
