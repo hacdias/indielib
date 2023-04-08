@@ -141,7 +141,7 @@ func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 // Please note that you need to fetch the authentication code yourself from the request.
 //
 //	_ = r.ParseForm()
-// 	code := r.Form.Get("code")
+//	code := r.Form.Get("code")
 //
 // The code was provided by you at a previous stage. Thus, you will need to use it to
 // rebuild the AuthenticationRequest data. The AuthenticationRequest does not need to have
