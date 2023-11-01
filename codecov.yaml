@@ -1,2 +1,5 @@
 comment:
   layout: 'reach, diff, files'
+
+ignore:
+- 'examples/'
