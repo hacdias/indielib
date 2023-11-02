@@ -2,13 +2,13 @@ package indieauth
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	urlpkg "net/url"
 	"strings"
 )
 
 var (
+	ErrInvalidRedirectURI         error = errors.New("redirect_uri is invalid")
 	ErrInvalidCodeChallengeMethod error = errors.New("invalid code challenge method")
 	ErrInvalidGrantType           error = errors.New("grant_type must be authorization_code")
 	ErrNoMatchClientID            error = errors.New("client_id differs")
@@ -69,7 +69,7 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 
 	clientID := r.FormValue("client_id")
 	if err := IsValidClientIdentifier(clientID); err != nil {
-		return nil, fmt.Errorf("invalid client_id: %w", err)
+		return nil, err
 	}
 
 	redirectURI := r.FormValue("redirect_uri")
@@ -118,12 +118,12 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 	client, err := urlpkg.Parse(clientID)
 	if err != nil {
-		return err
+		return errors.Join(ErrInvalidRedirectURI, err)
 	}
 
 	redirect, err := urlpkg.Parse(redirectURI)
 	if err != nil {
-		return err
+		return errors.Join(ErrInvalidRedirectURI, err)
 	}
 
 	if redirect.Host == client.Host {
@@ -132,7 +132,7 @@ func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 
 	// TODO: redirect URI may have a different host. In this case, we do
 	// discovery: https://indieauth.spec.indieweb.org/#redirect-url
-	return errors.New("redirect uri has different host from client id")
+	return errors.Join(ErrInvalidRedirectURI, errors.New("redirect uri has different host from client id"))
 }
 
 // ValidateTokenExchange validates the token exchange request according to the provided

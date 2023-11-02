@@ -8,6 +8,9 @@ import (
 )
 
 var (
+	ErrInvalidProfileURL       error = errors.New("invalid profile URL")
+	ErrInvalidClientIdentifier error = errors.New("invalid client identifier")
+
 	ErrInvalidScheme   error = errors.New("scheme must be either http or https")
 	ErrEmptyPath       error = errors.New("path must not be empty")
 	ErrInvalidPath     error = errors.New("path cannot contain single or double dots")
@@ -23,35 +26,35 @@ var (
 func IsValidProfileURL(profile string) error {
 	url, err := urlpkg.Parse(profile)
 	if err != nil {
-		return err
+		return errors.Join(ErrInvalidProfileURL, err)
 	}
 
 	if url.Scheme != "http" && url.Scheme != "https" {
-		return ErrInvalidScheme
+		return errors.Join(ErrInvalidProfileURL, ErrInvalidScheme)
 	}
 
 	if url.Path == "" {
-		return ErrEmptyPath
+		return errors.Join(ErrInvalidProfileURL, ErrEmptyPath)
 	}
 
 	if strings.Contains(url.Path, ".") || strings.Contains(url.Path, "..") {
-		return ErrInvalidPath
+		return errors.Join(ErrInvalidProfileURL, ErrInvalidPath)
 	}
 
 	if url.Fragment != "" {
-		return ErrInvalidFragment
+		return errors.Join(ErrInvalidProfileURL, ErrInvalidFragment)
 	}
 
 	if url.User.String() != "" {
-		return ErrUserIsSet
+		return errors.Join(ErrInvalidProfileURL, ErrUserIsSet)
 	}
 
 	if url.Port() != "" {
-		return ErrPortIsSet
+		return errors.Join(ErrInvalidProfileURL, ErrPortIsSet)
 	}
 
 	if net.ParseIP(url.Host) != nil {
-		return ErrIsIP
+		return errors.Join(ErrInvalidProfileURL, ErrIsIP)
 	}
 
 	return nil
@@ -62,32 +65,32 @@ func IsValidProfileURL(profile string) error {
 func IsValidClientIdentifier(identifier string) error {
 	url, err := urlpkg.Parse(identifier)
 	if err != nil {
-		return err
+		return errors.Join(ErrInvalidClientIdentifier, err)
 	}
 
 	if url.Scheme != "http" && url.Scheme != "https" {
-		return ErrInvalidScheme
+		return errors.Join(ErrInvalidClientIdentifier, ErrInvalidScheme)
 	}
 
 	if url.Path == "" {
-		return ErrEmptyPath
+		return errors.Join(ErrInvalidClientIdentifier, ErrEmptyPath)
 	}
 
 	if strings.Contains(url.Path, ".") || strings.Contains(url.Path, "..") {
-		return ErrInvalidPath
+		return errors.Join(ErrInvalidClientIdentifier, ErrInvalidPath)
 	}
 
 	if url.Fragment != "" {
-		return ErrInvalidFragment
+		return errors.Join(ErrInvalidClientIdentifier, ErrInvalidFragment)
 	}
 
 	if url.User.String() != "" {
-		return ErrUserIsSet
+		return errors.Join(ErrInvalidClientIdentifier, ErrUserIsSet)
 	}
 
 	if v := net.ParseIP(url.Host); v != nil {
 		if !v.IsLoopback() {
-			return ErrIsNonLoopback
+			return errors.Join(ErrInvalidClientIdentifier, ErrIsNonLoopback)
 		}
 	}
 
