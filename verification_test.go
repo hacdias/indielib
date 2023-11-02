@@ -26,6 +26,7 @@ var invalidProfileURLs = []struct {
 }{
 	{"example.com", ErrInvalidScheme},
 	{"mailto:user@example.com", ErrInvalidScheme},
+	{"https://example.com", ErrEmptyPath},
 	{"https://example.com/foo/../bar", ErrInvalidPath},
 	{"https://example.com/#me", ErrInvalidFragment},
 	{"https://user:pass@example.com/", ErrUserIsSet},
