@@ -3,6 +3,8 @@ package indieauth
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var validProfileURLs = []string{
@@ -14,9 +16,7 @@ var validProfileURLs = []string{
 func TestValidProfileURL(t *testing.T) {
 	for _, profileURL := range validProfileURLs {
 		err := IsValidProfileURL(profileURL)
-		if err != nil {
-			t.Error("profile URL is valid, but errored", err)
-		}
+		assert.NoError(t, err, profileURL)
 	}
 }
 
@@ -36,9 +36,7 @@ var invalidProfileURLs = []struct {
 func TestInvalidProfileURL(t *testing.T) {
 	for _, test := range invalidProfileURLs {
 		err := IsValidProfileURL(test.URL)
-		if err != test.Error {
-			t.Error("expected to error with", test.Error, "but errored with", err)
-		}
+		assert.ErrorIs(t, err, test.Error, test.URL)
 	}
 }
 
@@ -54,9 +52,7 @@ var validClientIdentifiers = []string{
 func TestValidClientIdentifier(t *testing.T) {
 	for _, clientID := range validClientIdentifiers {
 		err := IsValidClientIdentifier(clientID)
-		if err != nil {
-			t.Error("client ID is valid, but errored", err)
-		}
+		assert.NoError(t, err, clientID)
 	}
 }
 
@@ -75,9 +71,7 @@ var invalidClientIdentifier = []struct {
 func TestInvalidClientIdentifier(t *testing.T) {
 	for _, test := range invalidClientIdentifier {
 		err := IsValidClientIdentifier(test.URL)
-		if err != test.Error {
-			t.Error("expected to error with", test.Error, "but errored with", err)
-		}
+		assert.ErrorIs(t, err, test.Error, test.URL)
 	}
 }
 
