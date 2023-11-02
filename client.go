@@ -23,47 +23,9 @@ var (
 	ErrInvalidIssuer error = errors.New("issuer does not match")
 )
 
-// Client is a IndieAuth client. As a client, you want to authenticate other users
-// to log into onto your website.
-//
-// First, create a client with the correct client ID and callback URL.
-//
-//	client := NewClient("https://example.com/", "https://example.com/callback", nil)
-//
-// Then, obtain the user's profile URL via some method, such as an HTTP form. Optionally,
-// canonicalize the value (see CanonicalizeURL for more information).
-//
-//	profile = CanonicalizeURL(profile)
-//
-// Then, validate the profile URL according to the specification.
-//
-//	err = IsValidProfileURL(profile)
-//	if err != nil {
-//		// Do something
-//	}
-//
-// Obtain the authentication information and redirect URL:
-//
-//	authData, redirect, err := client.Authenticate(profile, "the scopes you need")
-//	if err != nil {
-//		// Do something
-//	}
-//
-// The client should now store authData because it will be necessary to verify the callback.
-// You can store it, for example, in a database or cookie. Then, redirect the user:
-//
-//	http.Redirect(w, r, redirect, http.StatusSeeOther)
-//
-// In the callback handler, you should obtain authData according to the method you defined.
-// Then, call ValidateCallback to obtain the code:
-//
-//	code, err := client.ValidateCallback(authData, r)
-//	if err != nil {
-//		// Do something
-//	}
-//
-// Now that you have the code, you have to redeem it. You can either use FetchProfile to
-// redeem it by the users' profile or GetToken.
+// Client is an IndieAuth client. As a client, you want to authenticate other users
+// to log into your website. An example of how to use the client library can be
+// found in the examples/client/ directory.
 type Client struct {
 	Client *http.Client
 
@@ -71,8 +33,8 @@ type Client struct {
 	RedirectURL string
 }
 
-// NewClient creates a new Client from the provided clientID and redirectURL. If
-// no httpClient is given, http.DefaultClient will be used.
+// NewClient creates a new [Client] from the provided clientID and redirectURL.
+// If no httpClient is given, [http.DefaultClient] will be used.
 func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
 	c := &Client{
 		ClientID:    clientID,
@@ -122,12 +84,13 @@ type Metadata struct {
 	UserInfoEndpoint                           string   `json:"userinfo_endpoint"`
 }
 
-// Authenticate takes a profile URL and the desired scope, discovers the required endpoints,
-// generates a random scope and code challenge (using method SHA256), and builds the authorization
-// URL. It returns the authorization info, redirect URI and an error.
+// Authenticate takes a profile URL and the desired scope, discovers the required
+// endpoints, generates a random state and code challenge (using method SHA256),
+// and builds the authorization URL. It returns the authorization info, redirect
+// URI and an error.
 //
-// The returned AuthInfo should be stored by the caller of this function in such a way that it
-// can be retrieved to validate the callback.
+// The returned [AuthInfo] should be stored by the caller of this function in
+// such a way that it can be retrieved to validate the callback.
 func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) {
 	metadata, err := c.DiscoverMetadata(profile)
 	if err != nil {
@@ -180,7 +143,7 @@ func newState() (string, error) {
 }
 
 // ValidateCallback validates the callback request by checking if the code exists
-// and if the state is valid according to the provided AuthInfo.
+// and if the state is valid according to the provided [AuthInfo].
 func (c *Client) ValidateCallback(i *AuthInfo, r *http.Request) (string, error) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -207,9 +170,9 @@ func (c *Client) ValidateCallback(i *AuthInfo, r *http.Request) (string, error) 
 	return code, nil
 }
 
-// ProfileFromToken retrieves the extra information from the token and
-// creates a profile based on it. Note that the profile may be nil in case
-// no information can be retrieved.
+// ProfileFromToken retrieves the extra information from the token and creates a
+// profile based on it. Note that the profile may be nil in case no information
+// can be retrieved.
 func ProfileFromToken(token *oauth2.Token) *Profile {
 	me, ok := token.Extra("me").(string)
 	if !ok || me == "" {
@@ -244,8 +207,8 @@ func ProfileFromToken(token *oauth2.Token) *Profile {
 	return p
 }
 
-// GetToken exchanges the code for an oauth2.Token based on the provided information.
-// It returns the token and an oauth2.Config object which can be used to create an http
+// GetToken exchanges the code for an [oauth2.Token] based on the provided information.
+// It returns the token and an [oauth2.Config] object which can be used to create an http
 // client that uses the token on future requests.
 //
 // Note that token.Raw may contain other information returned by the server, such as
@@ -278,8 +241,8 @@ func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Conf
 	return tok, o, nil
 }
 
-// GetOAuth2 returns an oauth2.Config based on the given endpoints. This can be used
-// to get an http.Client See https://pkg.go.dev/golang.org/x/oauth2 for more details.
+// GetOAuth2 returns an [oauth2.Config] based on the given endpoints. This can be
+// used to get an [http.Client]. See the documentation of [oauth2] for more details.
 func (c *Client) GetOAuth2(m *Metadata) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:    c.ClientID,
@@ -291,11 +254,11 @@ func (c *Client) GetOAuth2(m *Metadata) *oauth2.Config {
 	}
 }
 
-// FetchProfile fetches the user profile, exchanging the authentication code from
-// their authentication endpoint, as described in the link below. Please note that
+// FetchProfile fetches the user [Profile], exchanging the authentication code from
+// their authentication endpoint, as per [specification]. Please note that
 // this action consumes the code.
 //
-// https://indieauth.spec.indieweb.org/#profile-url-response
+// [specification]: https://indieauth.spec.indieweb.org/#profile-url-response
 func (c *Client) FetchProfile(i *AuthInfo, code string) (*Profile, error) {
 	v := url.Values{
 		"grant_type":    {"authorization_code"},

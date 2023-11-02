@@ -25,8 +25,8 @@ type Server struct {
 	RequirePKCE bool
 }
 
-// NewServer creates a new Server that from the given options. If
-// no httpClient is given, http.DefaultClient will be used.
+// NewServer creates a new [Server] that from the given options. If
+// no httpClient is given, [http.DefaultClient] will be used.
 func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 	s := &Server{
 		RequirePKCE: requirePKCE,
@@ -135,17 +135,18 @@ func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 	return errors.Join(ErrInvalidRedirectURI, errors.New("redirect uri has different host from client id"))
 }
 
-// ValidateTokenExchange validates the token exchange request according to the provided
-// authentication request and returns an error.
+// ValidateTokenExchange validates the token exchange request according to the
+// provided authentication request and returns an error.
 //
-// Please note that you need to fetch the authentication code yourself from the request.
+// Please note that you need to fetch the authentication code yourself from the
+// request.
 //
 //	_ = r.ParseForm()
 //	code := r.Form.Get("code")
 //
-// The code was provided by you at a previous stage. Thus, you will need to use it to
-// rebuild the AuthenticationRequest data. The AuthenticationRequest does not need to have
-// the scope or state set for this validation.
+// The code was provided by you at a previous stage. Thus, you will need to use
+// it to rebuild the [AuthenticationRequest] data. The [AuthenticationRequest]
+// does not need to have the scope or state set for this validation.
 func (s *Server) ValidateTokenExchange(authRequest *AuthenticationRequest, r *http.Request) error {
 	if err := r.ParseForm(); err != nil {
 		return err

@@ -6,13 +6,14 @@ import (
 	"encoding/base64"
 )
 
-// CodeChallengeMethods are the code challenge methods that are supported by this package.
+// CodeChallengeMethods are the code challenge methods that are supported by
+// this package.
 var CodeChallengeMethods = []string{
 	"plain", "S256",
 }
 
 // IsValidCodeChallengeMethod returns whether the provided code challenge method
-// is or is not valid.
+// is valid or not.
 func IsValidCodeChallengeMethod(ccm string) bool {
 	return containsString(CodeChallengeMethods, ccm)
 }
@@ -21,7 +22,9 @@ func IsValidCodeChallengeMethod(ccm string) bool {
 // Right now, we support "plain" and "S256" code challenge methods.
 //
 // The caller is responsible for handling cases where the length of the code
-// challenge or code verifier fall outside the range permitted by RFC 7636.
+// challenge or code verifier fall outside the range permitted by [RFC 7636].
+//
+// [RFC 7636]: https://datatracker.ietf.org/doc/html/rfc7636
 func ValidateCodeChallenge(ccm, cc, ver string) bool {
 	// See https://datatracker.ietf.org/doc/html/rfc7636#section-4.6.
 	switch ccm {
