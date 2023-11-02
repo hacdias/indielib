@@ -1,3 +1,5 @@
-// This package provides a set of tools to help you implement IndieAuth, both as a Server
-// or as a Client, according to the spec: https://indieauth.spec.indieweb.org
+// This package provides a set of tools to help you implement an IndieAuth client
+// or server, according to the [specification].
+//
+// [specification]: https://indieauth.spec.indieweb.org
 package indieauth

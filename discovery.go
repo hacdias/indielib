@@ -23,8 +23,11 @@ const (
 // target URL.
 var ErrNoEndpointFound = fmt.Errorf("no endpoint found")
 
-// DiscoverMetadata discovers the IndieAuth metadata of the provided URL, such as the authorization
-// and token endpoints. This code is partially based on https://github.com/willnorris/webmention/blob/main/webmention.go.
+// DiscoverMetadata discovers the IndieAuth metadata of the provided URL, such
+// as the authorization and token endpoints. This code is partially based on
+// [webmention.DiscoverEndpoint].
+//
+// [webmention.DiscoverEndpoint]: https://github.com/willnorris/webmention/blob/main/webmention.go
 func (c *Client) DiscoverMetadata(urlStr string) (*Metadata, error) {
 	metadata, err := c.discoverMetadata(urlStr)
 	if err == nil {

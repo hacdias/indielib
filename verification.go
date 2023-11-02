@@ -21,8 +21,9 @@ var (
 	ErrIsNonLoopback   error = errors.New("client id cannot be non-loopback ip")
 )
 
-// IsValidProfileURL validates the profile URL according to the specification.
-// https://indieauth.spec.indieweb.org/#user-profile-url
+// IsValidProfileURL validates the profile URL according to the [specification].
+//
+// [specification]: https://indieauth.spec.indieweb.org/#user-profile-url
 func IsValidProfileURL(profile string) error {
 	url, err := urlpkg.Parse(profile)
 	if err != nil {
@@ -60,8 +61,9 @@ func IsValidProfileURL(profile string) error {
 	return nil
 }
 
-// IsValidClientIdentifier validates a client identifier according to the specification.
-// https://indieauth.spec.indieweb.org/#client-identifier
+// IsValidClientIdentifier validates a client identifier according to the [specification].
+//
+// [specification]: https://indieauth.spec.indieweb.org/#client-identifier
 func IsValidClientIdentifier(identifier string) error {
 	url, err := urlpkg.Parse(identifier)
 	if err != nil {
