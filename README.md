@@ -10,7 +10,7 @@ This repository contains a set of tools to help you implement a [Micropub](https
 
 ## Usage
 
-Check the [documentation](https://pkg.go.dev/github.com/hacdias/micropub).
+Check the [documentation](https://pkg.go.dev/go.hacdias.com/micropub).
 
 ## Contribute
 
