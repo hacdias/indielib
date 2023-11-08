@@ -32,7 +32,28 @@ type Request struct {
 	Updates    *RequestUpdates
 }
 
-func parseFormEncodeed(body url.Values) (*Request, error) {
+// ParseRequest parses a Micropub POST [http.Request] into a [Request] object.
+// Supports both JSON and form-encoded requests.
+func ParseRequest(r *http.Request) (*Request, error) {
+	contentType := r.Header.Get("Content-type")
+	if strings.Contains(contentType, "json") {
+		req := requestJSON{}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			return nil, err
+		}
+		return parseJSON(req)
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseFormEncoded(r.Form)
+}
+
+func parseFormEncoded(body url.Values) (*Request, error) {
 	req := &Request{
 		Properties: map[string][]interface{}{},
 		Commands:   map[string][]interface{}{},
@@ -60,9 +81,9 @@ func parseFormEncodeed(body url.Values) (*Request, error) {
 			key = strings.TrimSuffix(key, "[]")
 
 			if strings.HasPrefix(key, "mp-") {
-				req.Commands[key] = toGenericArray(val)
+				req.Commands[key] = asAnySlice(val)
 			} else {
-				req.Properties[key] = toGenericArray(val)
+				req.Properties[key] = asAnySlice(val)
 			}
 		}
 
@@ -149,26 +170,7 @@ func parseJSON(body requestJSON) (*Request, error) {
 	return nil, errors.New("no micropub data was found in the request")
 }
 
-func ParseRequest(r *http.Request) (*Request, error) {
-	contentType := r.Header.Get("Content-type")
-	if strings.Contains(contentType, "json") {
-		req := requestJSON{}
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			return nil, err
-		}
-		return parseJSON(req)
-	}
-
-	err := r.ParseForm()
-	if err != nil {
-		return nil, err
-	}
-
-	return parseFormEncodeed(r.Form)
-}
-
-func toGenericArray(str []string) []interface{} {
+func asAnySlice[T any](str []T) []interface{} {
 	arr := []interface{}{}
 	for _, s := range str {
 		arr = append(arr, s)
