@@ -3,8 +3,6 @@ package micropub
 import (
 	"regexp"
 	"strings"
-
-	"github.com/karlseguin/typed"
 )
 
 // Type represents a post type.
@@ -32,6 +30,7 @@ const (
 	TypeAte       Type = "ate"
 	TypeDrank     Type = "drank"
 	TypeItinerary Type = "itinerary"
+	TypeUnknown   Type = "unknown"
 )
 
 type propTyp struct {
@@ -63,7 +62,7 @@ var propertyToType = []propTyp{
 
 // PropertyToType retrieves the [Type] that corresponds to a given property.
 // For example, given the property "listen-of", [TypeListen] would be returned.
-// Return is empty if no match was found.
+// Return is [TypeUnknown] if no match was found.
 func PropertyToType(prop string) Type {
 	for _, v := range propertyToType {
 		if v.prop == prop {
@@ -71,52 +70,43 @@ func PropertyToType(prop string) Type {
 		}
 	}
 
-	return ""
+	return TypeUnknown
 }
 
-// DiscoverType discovers a post type from its properties according to the algorithm
-// described in the "Post Type Discovery" specification.
-//   - https://www.w3.org/TR/post-type-discovery/
-//   - https://indieweb.org/post-type-discovery
+// DiscoverType discovers the [Type] from a Microformat type, according to the
+// [Post Type Discovery] algorithm. This is a slightly modified version that
+// includes all other post types and checking for their properties.
 //
-// This is a slightly modified version of @aaronpk's code to include reads and watches.
-// Original code: https://github.com/aaronpk/XRay/blob/master/lib/XRay/PostType.php
-func DiscoverType(data map[string]interface{}) (Type, string) {
-	properties := typed.New(data)
-	typ := getType(properties)
-
+// [Post Type Discovery]: https://www.w3.org/TR/post-type-discovery/
+func DiscoverType(data map[string]any) (Type, string) {
+	typ := getMf2Type(data)
 	switch typ {
 	case "event", "recipe", "review":
 		return Type(typ), ""
 	}
 
-	// This ensures that we can either send a MF2 post, a JF2 post or even an XRay post.
-	if p, ok := properties.MapIf("properties"); ok {
-		properties = typed.New(p)
-	}
-
+	properties := getMf2Properties(data)
 	for _, v := range propertyToType {
 		if _, ok := properties[v.prop]; ok {
 			return v.typ, v.prop
 		}
 	}
 
-	name, ok := properties.StringIf("name")
-	if !ok || name == "" {
+	name, _ := getMf2String(properties, "name")
+	if name == "" {
 		return TypeNote, ""
 	}
 
-	content := ""
-	if val, ok := properties.MapIf("content"); ok {
-		content = val["text"].(string)
-	} else if val, ok := properties.StringIf("summary"); ok {
-		content = val
-	}
-
-	// Collapse all sequences of internal whitespace to a single space (0x20) character each
+	// Get content (or summary), and collapse all sequences of internal whitespace
+	// to a single space (0x20) character each.
+	content := getMf2ContentOrSummary(properties)
 	var re = regexp.MustCompile(`/\s+/`)
 	name = re.ReplaceAllString(name, " ")
 	content = re.ReplaceAllString(content, " ")
+
+	// Trim whitespace.
+	name = strings.TrimSpace(name)
+	content = strings.TrimSpace(content)
 
 	// If this processed "name" property value is NOT a prefix of the
 	// processed "content" property, then it is an article post.
@@ -127,31 +117,83 @@ func DiscoverType(data map[string]interface{}) (Type, string) {
 	return TypeNote, ""
 }
 
-// IsType checks if the given type is a valid Microformats type.
-func IsType(typ Type) bool {
-	t := Type(typ)
-	switch t {
-	case TypeRsvp, TypeRepost, TypeLike, TypeReply, TypeBookmark,
-		TypeFollow, TypeRead, TypeWatch, TypeListen, TypeCheckin, TypeVideo,
-		TypeAudio, TypePhoto, TypeEvent, TypeRecipe, TypeReview, TypeNote, TypeArticle,
-		TypeAte, TypeDrank, TypeItinerary:
-		return true
-	default:
-		return false
+func getMf2Type(mf2 map[string]any) string {
+	typeAny, ok := mf2["type"]
+	if !ok {
+		return ""
 	}
-}
 
-func getType(data typed.Typed) string {
 	var typ string
 
-	if t, ok := data.StringIf("type"); ok {
-		typ = t
+	if typeSlice, ok := typeAny.([]string); ok {
+		if len(typeSlice) != 0 {
+			typ = typeSlice[0]
+		}
+	} else if typeSlice, ok := typeAny.([]any); ok {
+		if len(typeSlice) != 0 {
+			typ, _ = typeSlice[0].(string)
+		}
 	}
 
-	if ts, ok := data.StringsIf("type"); ok {
-		typ = strings.TrimSpace(strings.Join(ts, ""))
+	return strings.TrimPrefix(typ, "h-")
+}
+
+func getMf2Properties(mf2 map[string]any) map[string][]any {
+	propertiesAny, ok := mf2["properties"]
+	if !ok {
+		return nil
 	}
 
-	typ = strings.TrimPrefix(typ, "h-")
-	return typ
+	if properties, ok := propertiesAny.(map[string][]any); ok {
+		return properties
+	}
+
+	propertiesMap, ok := propertiesAny.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	properties := map[string][]any{}
+	for k, v := range propertiesMap {
+		vSlice, ok := v.([]any)
+		if ok {
+			// Just ignore everything that does not comply with the specification.
+			properties[k] = vSlice
+		}
+	}
+	return properties
+}
+
+func getMf2ContentOrSummary(properties map[string][]any) string {
+	if contentSlice, ok := properties["content"]; ok {
+		if len(contentSlice) != 0 {
+			contentMap, ok := contentSlice[0].(map[string]any)
+			if ok {
+				if content, ok := contentMap["text"].(string); ok && content != "" {
+					return content
+				}
+
+				if content, ok := contentMap["value"].(string); ok && content != "" {
+					return content
+				}
+			}
+		}
+	}
+
+	content, _ := getMf2String(properties, "summary")
+	return content
+}
+
+func getMf2String(properties map[string][]any, property string) (string, bool) {
+	slice, ok := properties[property]
+	if !ok {
+		return "", false
+	}
+
+	if len(slice) == 0 {
+		return "", false
+	}
+
+	v, ok := slice[0].(string)
+	return v, ok
 }
