@@ -30,15 +30,15 @@ type RouterImplementation interface {
 	// location (e.g., URL) of the uploaded file.
 	UploadMedia(file multipart.File, header *multipart.FileHeader) (string, error)
 
-	// Source returns the microformats source of a certain URL.
-	Source(url string) (interface{}, error)
+	// Source returns the Microformats source of a certain URL.
+	Source(url string) (map[string]any, error)
 
-	// Create makes a create request according to the given [Request]. Must return
-	// the location (e.g., URL) of the created post.
+	// Create makes a create request according to the given [Request].
+	// Must return the location (e.g., URL) of the created post.
 	Create(req *Request) (string, error)
 
-	// Update makes an update request according to the given [Request]. Must return
-	// the location (e.g., URL) of the update post.
+	// Update makes an update request according to the given [Request].
+	// Must return the location (e.g., URL) of the update post.
 	Update(req *Request) (string, error)
 
 	// Delete deletes the post at the given URL.
@@ -48,13 +48,25 @@ type RouterImplementation interface {
 	Undelete(url string) error
 }
 
-// MicropubConfig is the configuration provided to the Micropub client when
-// it queries the server for its configuration.
-type MicropubConfig struct {
-	MediaEndpoint string        `json:"media-endpoint,omitempty"`
-	SyndicateTo   []Syndication `json:"syndicate-to,omitempty"`
-	Channels      []Channel     `json:"channels,omitempty"`
-	PostTypes     []PostType    `json:"post-types,omitempty"`
+// RouterConfiguration is the interface you have to implement to provide configuration.
+// This is necessary for the micropub endpoint config query, and related.
+type RouterConfiguration interface {
+	// MediaEndpoint is the URL of the [media endpoint]. Return empty string to not set.
+	//
+	// [media endpoint]: https://micropub.spec.indieweb.org/#media-endpoint
+	MediaEndpoint() string
+
+	// SyndicateTo are the syndication targets. Return empty slice to not set.
+	SyndicateTo() []Syndication
+
+	// Channels are the available channels. Return empty slice to not set.
+	Channels() []Channel
+
+	// Categories are the available categories. Return empty slice to not set.
+	Categories() []string
+
+	// PostTypes are the allowed post types. Return empty slice to not set.
+	PostTypes() []PostType
 }
 
 // PostType is part of [MicropubConfig] and used to provide information regarding
@@ -81,13 +93,13 @@ type Channel = uidAndName
 
 type Router struct {
 	impl RouterImplementation
-	conf MicropubConfig
+	conf RouterConfiguration
 }
 
 // NewRouter creates a new [Router] object with the given [RouterImplementation]
 // and the given [MicropubConfig]. The configuration is used to return to a Micropub
 // client when it requests for configuration.
-func NewRouter(impl RouterImplementation, conf MicropubConfig) *Router {
+func NewRouter(impl RouterImplementation, conf RouterConfiguration) *Router {
 	return &Router{
 		impl: impl,
 		conf: conf,
@@ -95,7 +107,21 @@ func NewRouter(impl RouterImplementation, conf MicropubConfig) *Router {
 }
 
 // MicropubHandler is an [http.HandlerFunc] that can be mounted under the path
-// for a micropub server handler.
+// for a micropub server handler. The following routes are processed:
+//
+//		GET /micropub?q=source
+//		GET /micropub?q=config
+//		GET /micropub?q=syndicate-to
+//		GET /micropub?q=category
+//		GET /micropub?q=channel
+//	 	POST /micropub
+//			- as form-encoded: create, delete, undelete
+//			- as json: create, update, delete, undelete
+//
+// The provided [RouterImplementation] and [RouterConfiguration] are used to
+// fulfill the requests according to the [specification].
+//
+// [specification]: https://micropub.spec.indieweb.org/
 func (ro *Router) MicropubHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -111,8 +137,45 @@ func (ro *Router) micropubGet(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Query().Get("q") {
 	case "source":
 		ro.micropubSource(w, r)
-	case "config", "syndicate-to":
-		ro.micropubConfig(w, r)
+	case "config":
+		config := map[string]any{}
+		if mediaEndpoint := ro.conf.MediaEndpoint(); mediaEndpoint != "" {
+			config["media-endpoint"] = mediaEndpoint
+		}
+		if syndicateTo := ro.conf.SyndicateTo(); len(syndicateTo) != 0 {
+			config["syndicate-to"] = syndicateTo
+		}
+		if channels := ro.conf.Channels(); len(channels) != 0 {
+			config["channels"] = channels
+		}
+		if categories := ro.conf.Categories(); len(categories) != 0 {
+			config["categories"] = categories
+		}
+		if postTypes := ro.conf.PostTypes(); len(postTypes) != 0 {
+			config["post-types"] = postTypes
+		}
+		serveJSON(w, http.StatusOK, config)
+	case "syndicate-to":
+		syndicateTo := ro.conf.SyndicateTo()
+		if len(syndicateTo) == 0 {
+			serveError(w, ErrNotFound)
+		} else {
+			serveJSON(w, http.StatusOK, map[string]any{"syndicate-to": syndicateTo})
+		}
+	case "category":
+		categories := ro.conf.Categories()
+		if len(categories) == 0 {
+			serveError(w, ErrNotFound)
+		} else {
+			serveJSON(w, http.StatusOK, map[string]any{"categories": categories})
+		}
+	case "channel":
+		channels := ro.conf.Channels()
+		if len(channels) == 0 {
+			serveError(w, ErrNotFound)
+		} else {
+			serveJSON(w, http.StatusOK, map[string]any{"channels": channels})
+		}
 	default:
 		serveError(w, ErrNotFound)
 	}
@@ -132,10 +195,6 @@ func (ro *Router) micropubSource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serveJSON(w, http.StatusOK, obj)
-}
-
-func (ro *Router) micropubConfig(w http.ResponseWriter, r *http.Request) {
-	serveJSON(w, http.StatusOK, ro.conf)
 }
 
 func (ro *Router) micropubPost(w http.ResponseWriter, r *http.Request) {
