@@ -8,6 +8,12 @@
 
 This repository contains a set of tools to help you implement [IndieAuth](https://indieauth.spec.indieweb.org/), both server and client, in Go.
 
+## Install
+
+```
+go get github.com/hacdias/indieauth@latest
+```
+
 ## Usage
 
 Check the [documentation](https://pkg.go.dev/github.com/hacdias/indieauth).
@@ -16,9 +22,9 @@ Check the [documentation](https://pkg.go.dev/github.com/hacdias/indieauth).
 
 This repository contains two demos as examples: [server](examples/server/) and [client](examples/client/).
 
-## Contribute
+## Contributing
 
-Just open an issue or a pull request.
+Feel free to open an issue or a pull request.
 
 ## License
 
