@@ -73,6 +73,107 @@ func (m *mockRouterImplementation) Undelete(url string) error {
 	return m.Called(url).Error(0)
 }
 
+func TestRouterGet(t *testing.T) {
+	t.Parallel()
+
+	t.Run("?q=source (missing URL)", func(t *testing.T) {
+		config := &mockRouterConfiguration{}
+		impl := &mockRouterImplementation{}
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source", nil)
+
+		router := NewRouter(impl, config)
+		router.MicropubHandler(w, r)
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+
+	t.Run("?q=source&url=", func(t *testing.T) {
+		config := &mockRouterConfiguration{}
+		impl := &mockRouterImplementation{}
+		impl.Mock.On("Source", "https://example.com/1").Return(map[string]any{"type": "h-entry", "properties": map[string][]any{}}, nil)
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source&url=https://example.com/1", nil)
+
+		router := NewRouter(impl, config)
+		router.MicropubHandler(w, r)
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		body, err := io.ReadAll(w.Result().Body)
+		assert.NoError(t, err)
+		assert.EqualValues(t, `{"properties":{},"type":"h-entry"}`+"\n", string(body))
+	})
+
+	t.Run("?q=config", func(t *testing.T) {
+		config := &mockRouterConfiguration{}
+		impl := &mockRouterImplementation{}
+
+		config.Mock.On("MediaEndpoint").Return("https://example.com/media")
+		config.Mock.On("Channels").Return([]Channel{})
+		config.Mock.On("SyndicateTo").Return([]Syndication{})
+		config.Mock.On("Categories").Return([]string{"a", "b"})
+		config.Mock.On("PostTypes").Return([]PostType{})
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=config", nil)
+
+		router := NewRouter(impl, config)
+		router.MicropubHandler(w, r)
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		body, err := io.ReadAll(w.Result().Body)
+		assert.NoError(t, err)
+		assert.EqualValues(t, `{"categories":["a","b"],"media-endpoint":"https://example.com/media"}`+"\n", string(body))
+	})
+
+	t.Run("?q=category, syndicate-to, channel", func(t *testing.T) {
+		for _, testCase := range []struct {
+			functionName   string
+			functionReturn any
+			query          string
+			expectedStatus int
+			expectedBody   []byte
+		}{
+			{"SyndicateTo", []Syndication{{UID: "art-tree", Name: "Art Tree"}}, "?q=syndicate-to", http.StatusOK, []byte(`{"syndicate-to":[{"uid":"art-tree","name":"Art Tree"}]}` + "\n")},
+			{"SyndicateTo", []Syndication{}, "?q=syndicate-to", http.StatusNotFound, nil},
+			{"Categories", []string{"a", "b"}, "?q=category", http.StatusOK, []byte(`{"categories":["a","b"]}` + "\n")},
+			{"Categories", []string{}, "?q=category", http.StatusNotFound, nil},
+			{"Channels", []Channel{{UID: "art-tree", Name: "Art Tree"}}, "?q=channel", http.StatusOK, []byte(`{"channels":[{"uid":"art-tree","name":"Art Tree"}]}` + "\n")},
+			{"Channels", []Channel{}, "?q=channel", http.StatusNotFound, nil},
+		} {
+			config := &mockRouterConfiguration{}
+			impl := &mockRouterImplementation{}
+
+			config.Mock.On(testCase.functionName).Return(testCase.functionReturn)
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/micropub"+testCase.query, nil)
+
+			router := NewRouter(impl, config)
+			router.MicropubHandler(w, r)
+			assert.Equal(t, testCase.expectedStatus, w.Result().StatusCode)
+
+			if testCase.expectedBody != nil {
+				body, err := io.ReadAll(w.Result().Body)
+				assert.NoError(t, err)
+				assert.EqualValues(t, testCase.expectedBody, string(body))
+			}
+		}
+	})
+
+	t.Run("Missing/Invalid Query", func(t *testing.T) {
+		config := &mockRouterConfiguration{}
+		impl := &mockRouterImplementation{}
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=blah", nil)
+
+		router := NewRouter(impl, config)
+		router.MicropubHandler(w, r)
+
+		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
+	})
+}
+
 func TestRouterPost(t *testing.T) {
 	t.Parallel()
 
