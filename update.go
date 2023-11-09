@@ -4,13 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-
-	"github.com/samber/lo"
 )
 
 // UpdateProperties applies the updates (additions, deletions, replacements)
 // in the given [Request] to a set of existing microformats properties.
-func UpdateProperties(properties map[string][]interface{}, req *Request) (map[string][]interface{}, error) {
+func UpdateProperties(properties map[string][]any, req *Request) (map[string][]any, error) {
 	if req.Updates.Replace != nil {
 		for key, value := range req.Updates.Replace {
 			properties[key] = value
@@ -32,7 +30,7 @@ func UpdateProperties(properties map[string][]interface{}, req *Request) (map[st
 				}
 
 				if _, ok := properties[key]; !ok {
-					properties[key] = []interface{}{}
+					properties[key] = []any{}
 				}
 
 				properties[key] = append(properties[key], value...)
@@ -42,7 +40,7 @@ func UpdateProperties(properties map[string][]interface{}, req *Request) (map[st
 
 	if req.Updates.Delete != nil {
 		if reflect.TypeOf(req.Updates.Delete).Kind() == reflect.Slice {
-			toDelete, ok := req.Updates.Delete.([]interface{})
+			toDelete, ok := req.Updates.Delete.([]any)
 			if !ok {
 				return nil, errors.New("invalid delete array")
 			}
@@ -51,22 +49,22 @@ func UpdateProperties(properties map[string][]interface{}, req *Request) (map[st
 				delete(properties, fmt.Sprint(key))
 			}
 		} else {
-			toDelete, ok := req.Updates.Delete.(map[string]interface{})
+			toDelete, ok := req.Updates.Delete.(map[string]any)
 			if !ok {
-				return nil, fmt.Errorf("invalid delete object: expected map[string]interface{}, got: %s", reflect.TypeOf(req.Updates.Delete))
+				return nil, fmt.Errorf("invalid delete object: expected map[string]any, got: %s", reflect.TypeOf(req.Updates.Delete))
 			}
 
 			for key, v := range toDelete {
-				value, ok := v.([]interface{})
+				value, ok := v.([]any)
 				if !ok {
-					return nil, fmt.Errorf("invalid value: expected []interface{}, got: %s", reflect.TypeOf(value))
+					return nil, fmt.Errorf("invalid value: expected []any, got: %s", reflect.TypeOf(value))
 				}
 
 				if _, ok := properties[key]; !ok {
-					properties[key] = []interface{}{}
+					properties[key] = []any{}
 				}
 
-				properties[key] = lo.Filter(properties[key], func(ss interface{}, _ int) bool {
+				properties[key] = filter(properties[key], func(ss any, _ int) bool {
 					for _, s := range value {
 						if s == ss {
 							return false
@@ -79,4 +77,17 @@ func UpdateProperties(properties map[string][]interface{}, req *Request) (map[st
 	}
 
 	return properties, nil
+}
+
+// From https://github.com/samber/lo
+func filter[V any](collection []V, predicate func(item V, index int) bool) []V {
+	result := make([]V, 0, len(collection))
+
+	for i, item := range collection {
+		if predicate(item, i) {
+			result = append(result, item)
+		}
+	}
+
+	return result
 }
