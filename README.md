@@ -8,6 +8,12 @@
 
 This repository contains a set of tools to help you implement a [Micropub](https://micropub.spec.indieweb.org/) server in Go.
 
+## Install
+
+```
+go get go.hacdias.com/micropub@latest
+```
+
 ## Usage
 
 Check the [documentation](https://pkg.go.dev/go.hacdias.com/micropub).
