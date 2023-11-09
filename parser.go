@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+var (
+	ErrNoFormUpdate   = errors.New("micropub update actions require using the JSON syntax")
+	ErrNoURL          = errors.New("micropub actions require a URL property")
+	ErrNoData         = errors.New("no micropub data was found in the request")
+	ErrNoActionCreate = errors.New("cannot specify an action when creating a post")
+	ErrMultipleTypes  = errors.New("type must have a single value")
+)
+
 type Action string
 
 const (
@@ -17,26 +25,26 @@ const (
 	ActionUndelete Action = "undelete"
 )
 
-type RequestUpdates struct {
-	Replace map[string][]interface{}
-	Add     map[string][]interface{}
-	Delete  interface{}
+type RequestUpdate struct {
+	Replace map[string][]any
+	Add     map[string][]any
+	Delete  any
 }
 
 type Request struct {
 	Action     Action
 	URL        string
 	Type       string
-	Properties map[string][]interface{}
-	Commands   map[string][]interface{}
-	Updates    *RequestUpdates
+	Properties map[string][]any
+	Commands   map[string][]any
+	Updates    RequestUpdate
 }
 
 // ParseRequest parses a Micropub POST [http.Request] into a [Request] object.
 // Supports both JSON and form-encoded requests.
 func ParseRequest(r *http.Request) (*Request, error) {
 	contentType := r.Header.Get("Content-type")
-	if strings.Contains(contentType, "json") {
+	if strings.Contains(contentType, "application/json") {
 		req := requestJSON{}
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
@@ -54,12 +62,11 @@ func ParseRequest(r *http.Request) (*Request, error) {
 }
 
 func parseFormEncoded(body url.Values) (*Request, error) {
-	req := &Request{
-		Properties: map[string][]interface{}{},
-		Commands:   map[string][]interface{}{},
-	}
+	req := &Request{}
 
 	if typ := body.Get("h"); typ != "" {
+		req.Properties = map[string][]interface{}{}
+		req.Commands = map[string][]interface{}{}
 		req.Action = ActionCreate
 		req.Type = "h-" + typ
 
@@ -67,12 +74,12 @@ func parseFormEncoded(body url.Values) (*Request, error) {
 		delete(body, "access_token")
 
 		if _, ok := body["action"]; ok {
-			return nil, errors.New("cannot specify an action when creating a post")
+			return nil, ErrNoActionCreate
 		}
 
 		for key, val := range body {
 			if len(val) == 0 {
-				return nil, errors.New("values in form-encoded input can only be numeric indexed arrays")
+				continue
 			}
 
 			// TODO: some wild micropub clients seem to be posting stuff
@@ -88,56 +95,50 @@ func parseFormEncoded(body url.Values) (*Request, error) {
 		}
 
 		return req, nil
-
 	}
 
 	if action := body.Get("action"); action != "" {
 		if action == string(ActionUpdate) {
-			return nil, errors.New("micropub update actions require using the JSON syntax")
+			return nil, ErrNoFormUpdate
 		}
 
 		if url := body.Get("url"); url != "" {
 			req.URL = url
 		} else {
-			return nil, errors.New("micropub actions require a URL property")
+			return nil, ErrNoURL
 		}
 
 		req.Action = Action(action)
 		return req, nil
 	}
 
-	return nil, errors.New("no micropub data was found in the request")
+	return nil, ErrNoData
 }
 
 type requestJSON struct {
-	Type       []string                 `json:"type,omitempty"`
-	URL        string                   `json:"url,omitempty"`
-	Action     Action                   `json:"action,omitempty"`
-	Properties map[string][]interface{} `json:"properties,omitempty"`
-	Replace    map[string][]interface{} `json:"replace,omitempty"`
-	Add        map[string][]interface{} `json:"add,omitempty"`
-	Delete     interface{}              `json:"delete,omitempty"`
+	Type       []string         `json:"type,omitempty"`
+	URL        string           `json:"url,omitempty"`
+	Action     Action           `json:"action,omitempty"`
+	Properties map[string][]any `json:"properties,omitempty"`
+	Replace    map[string][]any `json:"replace,omitempty"`
+	Add        map[string][]any `json:"add,omitempty"`
+	Delete     interface{}      `json:"delete,omitempty"`
 }
 
 func parseJSON(body requestJSON) (*Request, error) {
-	req := &Request{
-		Properties: map[string][]interface{}{},
-		Commands:   map[string][]interface{}{},
-	}
+	req := &Request{}
 
 	if body.Type != nil {
 		if len(body.Type) != 1 {
-			return nil, errors.New("type must have a single value")
+			return nil, ErrMultipleTypes
 		}
 
+		req.Properties = map[string][]interface{}{}
+		req.Commands = map[string][]interface{}{}
 		req.Action = ActionCreate
 		req.Type = body.Type[0]
 
 		for key, value := range body.Properties {
-			if len(value) == 0 {
-				return nil, errors.New("property values in JSON format must be arrays")
-			}
-
 			if strings.HasPrefix(key, "mp-") {
 				req.Commands[key] = value
 			} else {
@@ -150,24 +151,22 @@ func parseJSON(body requestJSON) (*Request, error) {
 
 	if body.Action != "" {
 		if body.URL == "" {
-			return nil, errors.New("micropub actions require a url property")
+			return nil, ErrNoURL
 		}
 
 		req.Action = Action(body.Action)
 		req.URL = body.URL
 
 		if body.Action == ActionUpdate {
-			req.Updates = &RequestUpdates{
-				Add:     body.Add,
-				Replace: body.Replace,
-				Delete:  body.Delete,
-			}
+			req.Updates.Add = body.Add
+			req.Updates.Replace = body.Replace
+			req.Updates.Delete = body.Delete
 		}
 
 		return req, nil
 	}
 
-	return nil, errors.New("no micropub data was found in the request")
+	return nil, ErrNoData
 }
 
 func asAnySlice[T any](str []T) []interface{} {
