@@ -6,7 +6,7 @@
 [![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://pkg.go.dev/go.hacdias.com/indiekit)
 [![Codecov](https://img.shields.io/codecov/c/github/hacdias/indiekit?token=SSETVGG0UH&style=flat-square)](https://app.codecov.io/gh/hacdias/indiekit)
 
-This repository contains a set of tools to help you implement [IndieWeb](https://indieweb.org/) protocols, such as an [IndieAuth](https://indieauth.spec.indieweb.org/) server or client in Go.
+This repository contains a set of tools to help you implement [IndieWeb](https://indieweb.org/) protocols, such as an [IndieAuth](https://indieauth.spec.indieweb.org/) server or client; or a [Micropub](https://micropub.spec.indieweb.org/) server in Go.
 
 ## Install
 
