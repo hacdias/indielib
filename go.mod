@@ -1,4 +1,4 @@
-module github.com/hacdias/indieauth
+module go.hacdias.com/indieauth
 
 go 1.21
 

@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hacdias/indieauth"
+	"go.hacdias.com/indieauth"
 )
 
 const (
