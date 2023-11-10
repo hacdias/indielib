@@ -13,7 +13,7 @@ import (
 	"text/template"
 	"time"
 
-	"go.hacdias.com/indieauth"
+	"go.hacdias.com/indiekit/indieauth"
 )
 
 func main() {

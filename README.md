@@ -1,22 +1,22 @@
-# indieauth
+# indiekit
 
-> An IndieAuth client and server toolkit for Go.
+> An IndieWeb toolkit in Go.
 
-[![Go Report Card](https://goreportcard.com/badge/go.hacdias.com/indieauth?style=flat-square)](https://goreportcard.com/report/go.hacdias.com/indieauth)
-[![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://pkg.go.dev/go.hacdias.com/indieauth)
-[![Codecov](https://img.shields.io/codecov/c/github/hacdias/indieauth?token=SSETVGG0UH&style=flat-square)](https://app.codecov.io/gh/hacdias/indieauth)
+[![Go Report Card](https://goreportcard.com/badge/go.hacdias.com/indiekit?style=flat-square)](https://goreportcard.com/report/go.hacdias.com/indiekit)
+[![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://pkg.go.dev/go.hacdias.com/indiekit)
+[![Codecov](https://img.shields.io/codecov/c/github/hacdias/indieweb?token=SSETVGG0UH&style=flat-square)](https://app.codecov.io/gh/hacdias/indieweb)
 
-This repository contains a set of tools to help you implement [IndieAuth](https://indieauth.spec.indieweb.org/), both server and client, in Go.
+This repository contains a set of tools to help you implement [IndieWeb](https://indieweb.org/) protocols, such as an [IndieAuth](https://indieauth.spec.indieweb.org/) server or client in Go.
 
 ## Install
 
 ```
-go get go.hacdias.com/indieauth@latest
+go get go.hacdias.com/indiekit@latest
 ```
 
 ## Usage
 
-Check the [documentation](https://pkg.go.dev/go.hacdias.com/indieauth).
+Check the [documentation](https://pkg.go.dev/go.hacdias.com/indiekit).
 
 ## Example
 

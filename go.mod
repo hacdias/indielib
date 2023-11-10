@@ -1,4 +1,4 @@
-module go.hacdias.com/indieauth
+module go.hacdias.com/indiekit
 
 go 1.21
 
