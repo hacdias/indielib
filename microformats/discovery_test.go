@@ -1,4 +1,4 @@
-package micropub
+package microformats
 
 import (
 	"encoding/json"
