@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"flag"
 	"html/template"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"sync"
 
 	"go.hacdias.com/indiekit/indieauth"
+	"go.hacdias.com/indiekit/micropub"
 )
 
 func main() {
@@ -27,21 +29,31 @@ func main() {
 	}
 
 	// Create a new client.
-	server := &server{
+	s := &server{
 		profileURL:     profileURL,
 		authorizations: map[string]*authorization{},
+		tokens:         map[string]*token{},
+		posts:          map[string]post{},
 		ias:            indieauth.NewServer(true, nil),
 	}
 
-	http.HandleFunc("/", server.indexHandler)
-	http.HandleFunc("/authorization", server.authorizationHandler)
-	http.HandleFunc("/authorization/accept", server.authorizationAcceptHandler)
-	// Note: in production servers, the token endpoint, as well as the token
-	// verification endpoint should be also implemented. The token endpoint
-	// would be identical to the authorizationAcceptHandler, except that
-	// it would also produce a token as per the spec. I would recommend checking
-	// IndieAuth and OAuth2 specifications for more details.
+	// Mount general handler, which will handle the index page, as well as the
+	// post pages.
+	http.HandleFunc("/", s.generalHandler)
 
+	// Mounts the IndieAuth-related handlers. Since IndieAuth is an extension of OAuth2,
+	// it is important to be familiarized with how OAuth2 works. In addition, it is
+	// important to mention that not all OAuth2 handlers have been implemented.
+	http.HandleFunc("/authorization", s.authorizationHandler)
+	http.HandleFunc("/authorization/accept", s.authorizationAcceptHandler)
+	http.HandleFunc("/token", s.tokenHandler)
+
+	// Mounts the Micropub handler. We don't send any special configuration besides our
+	// implementation. Note that we wrap it with [server.mustAuth] which ensures that
+	// only authenticated requests pass through.
+	http.Handle("/micropub", s.mustAuth(micropub.NewHandler(&micropubImplementation{s})))
+
+	// Start it!
 	log.Printf("Listening on http://localhost:%d", *portPtr)
 	log.Printf("Listening on %s", profileURL)
 	if err := http.ListenAndServe(":"+strconv.Itoa(*portPtr), nil); err != nil {
@@ -49,10 +61,19 @@ func main() {
 	}
 }
 
+type post struct {
+	Type       string
+	Properties map[string][]any
+}
+
 type server struct {
 	profileURL       string
 	authorizations   map[string]*authorization
 	authorizationsMu sync.Mutex
+	tokens           map[string]*token
+	tokensMu         sync.Mutex
+	posts            map[string]post
+	postsMu          sync.RWMutex
 	ias              *indieauth.Server
 }
 
@@ -63,11 +84,43 @@ var (
 	templates = template.Must(template.ParseFS(templatesFs, "templates/*.html"))
 )
 
-// indexHandler serves a simple index page with a login form.
-func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
-	// Advertise authorization endpoint. There are multiple ways of doing this.
-	w.Header().Set("Link", `</authorization>; rel="authorization_endpoint"`)
+func (s *server) generalHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/" {
+		serveHTML(w, "index.html", map[string]any{
+			"Profile": s.profileURL,
+			"Posts":   s.posts,
+		})
+		return
+	}
 
+	s.postsMu.RLock()
+	defer s.postsMu.RUnlock()
+	if post, ok := s.posts[r.URL.Path]; ok {
+		serveHTML(w, "post.html", post)
+		return
+	}
+
+	httpError(w, http.StatusNotFound)
+}
+
+func httpError(w http.ResponseWriter, status int) {
+	http.Error(w, http.StatusText(status), status)
+}
+
+func serveHTML(w http.ResponseWriter, template string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = templates.ExecuteTemplate(w, "index.html", map[string]string{"Profile": s.profileURL})
+	_ = templates.ExecuteTemplate(w, template, data)
+}
+
+func serveJSON(w http.ResponseWriter, code int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(data)
+}
+
+func serveErrorJSON(w http.ResponseWriter, code int, err, errDescription string) {
+	serveJSON(w, code, map[string]string{
+		"error":             err,
+		"error_description": errDescription,
+	})
 }

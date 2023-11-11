@@ -1,13 +1,15 @@
-# IndieAuth Server Demo
+# Micropub and IndieAuth Server Demo
 
-This is a server demo using the [`indieauth`](../../) package. In this demo, an HTTP server is started and is used as the user's identity.
+This is a server demo using the [`indiekit`](../../) package. In this demo, an HTTP server is started and is used as the user's identity.
 
 - How to run: `go run .`
 - How to get help: `go run . --help` and read the [commented code](main.go)
 
 The example works best if not run in localhost. You can try Tailscale Funnel, ngrok, or other similar services to temporarily expose the service. This URL has to be passed via the `--client` flag.
 
-Note that this demo does not implement some functionalities from IndieAuth/OAuth2, such as token redeeming.
+Note that this demo does not implement all functionalities from IndieAuth/OAuth2.
+
+You can try this demo with applications such as [Quill](https://quill.p3k.io/), or [Micropublish](https://micropublish.net/).
 
 ## Using Tailscale Funnel
 
@@ -26,8 +28,8 @@ Press Ctrl+C to exit.
 And then the demo:
 
 ```console
-$ go run .  --port 3000 --profile "https://your-machine.and.your.ts.net/"
-2023/11/02 13:03:52 Listening on http://localhost:3000
+$ go run . --port 5050 --profile "https://your-machine.and.your.ts.net/"
+2023/11/02 13:03:52 Listening on http://localhost:5050
 2023/11/02 13:03:52 Listening on https://your-machine.and.your.ts.net/
 ```
 
