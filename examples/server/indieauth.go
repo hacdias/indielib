@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"go.hacdias.com/indiekit/indieauth"
+	"go.hacdias.com/indielib/indieauth"
 )
 
 type authorization struct {

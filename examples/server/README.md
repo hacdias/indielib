@@ -1,6 +1,6 @@
 # Micropub and IndieAuth Server Demo
 
-This is a server demo using the [`indiekit`](../../) package. In this demo, an HTTP server is started and is used as the user's identity.
+This is a server demo using the [`indielib`](../../) package. In this demo, an HTTP server is started and is used as the user's identity.
 
 - How to run: `go run .`
 - How to get help: `go run . --help` and read the [commented code](main.go)

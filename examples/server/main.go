@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"sync"
 
-	"go.hacdias.com/indiekit/indieauth"
-	"go.hacdias.com/indiekit/micropub"
+	"go.hacdias.com/indielib/indieauth"
+	"go.hacdias.com/indielib/micropub"
 )
 
 func main() {

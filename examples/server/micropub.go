@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"time"
 
-	"go.hacdias.com/indiekit/micropub"
+	"go.hacdias.com/indielib/micropub"
 )
 
 type micropubImplementation struct {

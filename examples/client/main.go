@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"go.hacdias.com/indiekit/indieauth"
+	"go.hacdias.com/indielib/indieauth"
 )
 
 const (
