@@ -48,25 +48,69 @@ type RouterImplementation interface {
 	Undelete(url string) error
 }
 
-// RouterConfiguration is the interface you have to implement to provide configuration.
-// This is necessary for the micropub endpoint config query, and related.
-type RouterConfiguration interface {
-	// MediaEndpoint is the URL of the [media endpoint]. Return empty string to not set.
-	//
-	// [media endpoint]: https://micropub.spec.indieweb.org/#media-endpoint
-	MediaEndpoint() string
+// Configuration is the configuration of a [Router]. Use the different [Option]
+// to customize your endpoint.
+type Configuration struct {
+	MediaEndpoint  string
+	MaxMediaSize   int64
+	GetSyndicateTo func() []Syndication
+	GetChannels    func() []Channel
+	GetCategories  func() []string
+	GetPostTypes   func() []PostType
+}
 
-	// SyndicateTo are the syndication targets. Return empty slice to not set.
-	SyndicateTo() []Syndication
+type Option func(*Configuration)
 
-	// Channels are the available channels. Return empty slice to not set.
-	Channels() []Channel
+// WithMediaEndpoint configures the URL of the [media endpoint]. This is used
+// when a Micropub client asks for the configuration of the endpoint. If this
+// is not set, a client won't be able to recognize the endpoint.
+//
+// [media endpoint]: https://micropub.spec.indieweb.org/#media-endpoint
+func WithMediaEndpoint(endpoint string) Option {
+	return func(conf *Configuration) {
+		conf.MediaEndpoint = endpoint
+	}
+}
 
-	// Categories are the available categories. Return empty slice to not set.
-	Categories() []string
+// WithMaxMediaSize configures the maximum size of media uploads, in bytes. By
+// default it is 20 MiB.
+func WithMaxMediaSize(size int64) Option {
+	return func(conf *Configuration) {
+		conf.MaxMediaSize = size
+	}
+}
 
-	// PostTypes are the allowed post types. Return empty slice to not set.
-	PostTypes() []PostType
+// WithGetSyndicateTo configures the getter for syndication targets. This allows
+// for dynamic syndication targets. Return an empty slice if there are no targets.
+func WithGetSyndicateTo(getSyndicateTo func() []Syndication) Option {
+	return func(conf *Configuration) {
+		conf.GetSyndicateTo = getSyndicateTo
+	}
+}
+
+// WithGetChannels configures the getter for channels. This allows for dynamic
+// channels. Return an empty slice if there are no channels.
+func WithGetChannels(getChannels func() []Channel) Option {
+	return func(conf *Configuration) {
+		conf.GetChannels = getChannels
+	}
+}
+
+// WithGetCategories configures the getter for the categories. This allows for
+// dynamic categories. Return an empty slice if there are no categories.
+func WithGetCategories(getCategories func() []string) Option {
+	return func(conf *Configuration) {
+		conf.GetCategories = getCategories
+	}
+}
+
+// WithGetPostTypes configures the getter for the allowed post types. This allows
+// for dynamic post types. Return an empty slice if you don't want it to be set
+// in the configuration.
+func WithGetPostTypes(getPostTypes func() []PostType) Option {
+	return func(conf *Configuration) {
+		conf.GetPostTypes = getPostTypes
+	}
 }
 
 // PostType is part of [MicropubConfig] and used to provide information regarding
@@ -92,17 +136,30 @@ type Syndication = uidAndName
 type Channel = uidAndName
 
 type Router struct {
+	conf Configuration
 	impl RouterImplementation
-	conf RouterConfiguration
 }
 
 // NewRouter creates a new [Router] object with the given [RouterImplementation]
 // and the given [MicropubConfig]. The configuration is used to return to a Micropub
 // client when it requests for configuration.
-func NewRouter(impl RouterImplementation, conf RouterConfiguration) *Router {
+func NewRouter(impl RouterImplementation, options ...Option) *Router {
+	conf := &Configuration{
+		MaxMediaSize:   20 << 20,
+		MediaEndpoint:  "",
+		GetSyndicateTo: func() []Syndication { return nil },
+		GetChannels:    func() []Channel { return nil },
+		GetCategories:  func() []string { return nil },
+		GetPostTypes:   func() []PostType { return nil },
+	}
+
+	for _, opt := range options {
+		opt(conf)
+	}
+
 	return &Router{
+		conf: *conf,
 		impl: impl,
-		conf: conf,
 	}
 }
 
@@ -139,38 +196,38 @@ func (ro *Router) micropubGet(w http.ResponseWriter, r *http.Request) {
 		ro.micropubSource(w, r)
 	case "config":
 		config := map[string]any{}
-		if mediaEndpoint := ro.conf.MediaEndpoint(); mediaEndpoint != "" {
-			config["media-endpoint"] = mediaEndpoint
+		if ro.conf.MediaEndpoint != "" {
+			config["media-endpoint"] = ro.conf.MediaEndpoint
 		}
-		if syndicateTo := ro.conf.SyndicateTo(); len(syndicateTo) != 0 {
+		if syndicateTo := ro.conf.GetSyndicateTo(); len(syndicateTo) != 0 {
 			config["syndicate-to"] = syndicateTo
 		}
-		if channels := ro.conf.Channels(); len(channels) != 0 {
+		if channels := ro.conf.GetChannels(); len(channels) != 0 {
 			config["channels"] = channels
 		}
-		if categories := ro.conf.Categories(); len(categories) != 0 {
+		if categories := ro.conf.GetCategories(); len(categories) != 0 {
 			config["categories"] = categories
 		}
-		if postTypes := ro.conf.PostTypes(); len(postTypes) != 0 {
+		if postTypes := ro.conf.GetPostTypes(); len(postTypes) != 0 {
 			config["post-types"] = postTypes
 		}
 		serveJSON(w, http.StatusOK, config)
 	case "syndicate-to":
-		syndicateTo := ro.conf.SyndicateTo()
+		syndicateTo := ro.conf.GetSyndicateTo()
 		if len(syndicateTo) == 0 {
 			serveError(w, ErrNotFound)
 		} else {
 			serveJSON(w, http.StatusOK, map[string]any{"syndicate-to": syndicateTo})
 		}
 	case "category":
-		categories := ro.conf.Categories()
+		categories := ro.conf.GetCategories()
 		if len(categories) == 0 {
 			serveError(w, ErrNotFound)
 		} else {
 			serveJSON(w, http.StatusOK, map[string]any{"categories": categories})
 		}
 	case "channel":
-		channels := ro.conf.Channels()
+		channels := ro.conf.GetChannels()
 		if len(channels) == 0 {
 			serveError(w, ErrNotFound)
 		} else {
@@ -257,7 +314,7 @@ func (ro *Router) MicropubMediaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := r.ParseMultipartForm(20 << 20)
+	err := r.ParseMultipartForm(ro.conf.MaxMediaSize)
 	if err != nil {
 		serveError(w, fmt.Errorf("%w: file is too large", ErrBadRequest))
 		return
