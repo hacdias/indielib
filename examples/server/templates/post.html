@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Post | Micropub and IndieAuth Server Demo</title>
+  </head>
+  <body>
+    <div class="{{ .Type }}">
+      {{ with .Properties}}
+        {{ with .name }}<h1 class="p-name">{{ range . }}{{ . }}{{ end }}</h1>{{ end }}
+        {{ with .content }}<p class="p-content">{{ range . }}{{ . }}{{ end }}</p>{{ end }}
+      {{ end }}
+
+      <h3>Stored Microformats</h3>
+      <code>
+        <pre>{{ .}}</pre>
+      </code>
+    </div>
+  </body>
+</html>

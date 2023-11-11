@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>IndieAuth Server Demo</title>
+    <title>Authorization | Micropub and IndieAuth Server Demo</title>
   </head>
   <body>
     <h1>IndieAuth Server Demo: Authorization</h1>
@@ -16,7 +16,7 @@
 
     <form method='post' action='/authorization/accept'>
       <input type="hidden" name="response_type" value="code">
-      <input type="hidden" name="scopes" value="{{ .Scopes }}">
+      <input type="hidden" name="scope" value="{{ range .Scopes}} {{ . }}{{ end }}">
       <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}">
       <input type="hidden" name="client_id" value="{{ .ClientID }}">
       <input type="hidden" name="state" value="{{ .State }}">

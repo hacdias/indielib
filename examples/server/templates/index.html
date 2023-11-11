@@ -1,11 +1,23 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>IndieAuth Server Demo</title>
+    <title>Micropub and IndieAuth Server Demo</title>
+    <link rel="authorization_endpoint" href="/authorization">
+    <link rel="token_endpoint" href="/token">
+    <link rel="micropub" href="/micropub">
   </head>
   <body>
-    <h1>IndieAuth Server Demo</h1>
+    <h1>Micropub and IndieAuth Server Demo</h1>
 
     <p>Sign in on a website that supports IndieAuth. Use <code>{{ .Profile }}</code> as your domain.</p>
+
+    <h2>Posts</h2>
+
+    <p>You can create posts using a Micropub client.</p>
+    <ul>
+      {{ range $path, $post := .Posts }}
+        <li><a href="{{ $path }}">{{ $path }}</a></li>
+      {{ end }}
+    </ul>
   </body>
 </html>

@@ -1,6 +1,6 @@
 # IndieAuth Client Demo
 
-This is a client demo using the [`indieauth`](../../) package. In this demo, an HTTP server is started where a user can use IndieAuth to log in. After navigating to the page, type your domain, and login. How to's:
+This is a client demo using the [`indiekit`](../../) package. In this demo, an HTTP server is started where a user can use IndieAuth to log in. After navigating to the page, type your domain, and login. How to's:
 
 - How to run: `go run .`
 - How to get help: `go run . --help` and read the [commented code](main.go)
