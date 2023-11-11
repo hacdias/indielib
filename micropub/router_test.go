@@ -13,30 +13,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type mockRouterConfiguration struct{ mock.Mock }
-
-var _ RouterConfiguration = &mockRouterConfiguration{}
-
-func (m *mockRouterConfiguration) MediaEndpoint() string {
-	return m.Called().Get(0).(string)
-}
-
-func (m *mockRouterConfiguration) SyndicateTo() []Syndication {
-	return m.Called().Get(0).([]Syndication)
-}
-
-func (m *mockRouterConfiguration) Channels() []Channel {
-	return m.Called().Get(0).([]Channel)
-}
-
-func (m *mockRouterConfiguration) Categories() []string {
-	return m.Called().Get(0).([]string)
-}
-
-func (m *mockRouterConfiguration) PostTypes() []PostType {
-	return m.Called().Get(0).([]PostType)
-}
-
 type mockRouterImplementation struct{ mock.Mock }
 
 var _ RouterImplementation = &mockRouterImplementation{}
@@ -77,26 +53,24 @@ func TestRouterGet(t *testing.T) {
 	t.Parallel()
 
 	t.Run("?q=source (missing URL)", func(t *testing.T) {
-		config := &mockRouterConfiguration{}
 		impl := &mockRouterImplementation{}
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source", nil)
 
-		router := NewRouter(impl, config)
+		router := NewRouter(impl)
 		router.MicropubHandler(w, r)
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})
 
 	t.Run("?q=source&url=", func(t *testing.T) {
-		config := &mockRouterConfiguration{}
 		impl := &mockRouterImplementation{}
 		impl.Mock.On("Source", "https://example.com/1").Return(map[string]any{"type": "h-entry", "properties": map[string][]any{}}, nil)
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source&url=https://example.com/1", nil)
 
-		router := NewRouter(impl, config)
+		router := NewRouter(impl)
 		router.MicropubHandler(w, r)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		body, err := io.ReadAll(w.Result().Body)
@@ -105,19 +79,19 @@ func TestRouterGet(t *testing.T) {
 	})
 
 	t.Run("?q=config", func(t *testing.T) {
-		config := &mockRouterConfiguration{}
 		impl := &mockRouterImplementation{}
-
-		config.Mock.On("MediaEndpoint").Return("https://example.com/media")
-		config.Mock.On("Channels").Return([]Channel{})
-		config.Mock.On("SyndicateTo").Return([]Syndication{})
-		config.Mock.On("Categories").Return([]string{"a", "b"})
-		config.Mock.On("PostTypes").Return([]PostType{})
+		options := []Option{
+			WithMediaEndpoint("https://example.com/media"),
+			WithGetCategories(func() []string {
+				return []string{"a", "b"}
+			}),
+		}
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=config", nil)
 
-		router := NewRouter(impl, config)
+		router := NewRouter(impl, options...)
+
 		router.MicropubHandler(w, r)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		body, err := io.ReadAll(w.Result().Body)
@@ -127,28 +101,24 @@ func TestRouterGet(t *testing.T) {
 
 	t.Run("?q=category, syndicate-to, channel", func(t *testing.T) {
 		for _, testCase := range []struct {
-			functionName   string
-			functionReturn any
+			options        []Option
 			query          string
 			expectedStatus int
 			expectedBody   []byte
 		}{
-			{"SyndicateTo", []Syndication{{UID: "art-tree", Name: "Art Tree"}}, "?q=syndicate-to", http.StatusOK, []byte(`{"syndicate-to":[{"uid":"art-tree","name":"Art Tree"}]}` + "\n")},
-			{"SyndicateTo", []Syndication{}, "?q=syndicate-to", http.StatusNotFound, nil},
-			{"Categories", []string{"a", "b"}, "?q=category", http.StatusOK, []byte(`{"categories":["a","b"]}` + "\n")},
-			{"Categories", []string{}, "?q=category", http.StatusNotFound, nil},
-			{"Channels", []Channel{{UID: "art-tree", Name: "Art Tree"}}, "?q=channel", http.StatusOK, []byte(`{"channels":[{"uid":"art-tree","name":"Art Tree"}]}` + "\n")},
-			{"Channels", []Channel{}, "?q=channel", http.StatusNotFound, nil},
+			{[]Option{WithGetSyndicateTo(func() []Syndication { return []Syndication{{UID: "art-tree", Name: "Art Tree"}} })}, "?q=syndicate-to", http.StatusOK, []byte(`{"syndicate-to":[{"uid":"art-tree","name":"Art Tree"}]}` + "\n")},
+			{[]Option{}, "?q=syndicate-to", http.StatusNotFound, nil},
+			{[]Option{WithGetCategories(func() []string { return []string{"a", "b"} })}, "?q=category", http.StatusOK, []byte(`{"categories":["a","b"]}` + "\n")},
+			{[]Option{}, "?q=category", http.StatusNotFound, nil},
+			{[]Option{WithGetChannels(func() []Channel { return []Channel{{UID: "art-tree", Name: "Art Tree"}} })}, "?q=channel", http.StatusOK, []byte(`{"channels":[{"uid":"art-tree","name":"Art Tree"}]}` + "\n")},
+			{[]Option{}, "?q=channel", http.StatusNotFound, nil},
 		} {
-			config := &mockRouterConfiguration{}
 			impl := &mockRouterImplementation{}
-
-			config.Mock.On(testCase.functionName).Return(testCase.functionReturn)
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/micropub"+testCase.query, nil)
 
-			router := NewRouter(impl, config)
+			router := NewRouter(impl, testCase.options...)
 			router.MicropubHandler(w, r)
 			assert.Equal(t, testCase.expectedStatus, w.Result().StatusCode)
 
@@ -161,13 +131,12 @@ func TestRouterGet(t *testing.T) {
 	})
 
 	t.Run("Missing/Invalid Query", func(t *testing.T) {
-		config := &mockRouterConfiguration{}
 		impl := &mockRouterImplementation{}
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=blah", nil)
 
-		router := NewRouter(impl, config)
+		router := NewRouter(impl)
 		router.MicropubHandler(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
@@ -179,7 +148,6 @@ func TestRouterPost(t *testing.T) {
 
 	t.Run("Valid Request", func(t *testing.T) {
 		for _, request := range validRequests {
-			config := &mockRouterConfiguration{}
 			impl := &mockRouterImplementation{}
 
 			switch request.response.Action {
@@ -201,7 +169,7 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl, config)
+			router := NewRouter(impl)
 			router.MicropubHandler(w, r)
 
 			switch request.response.Action {
@@ -221,7 +189,6 @@ func TestRouterPost(t *testing.T) {
 
 	t.Run("Valid Request, No Scope Permission", func(t *testing.T) {
 		for _, request := range validRequests {
-			config := &mockRouterConfiguration{}
 			impl := &mockRouterImplementation{}
 
 			switch request.response.Action {
@@ -239,7 +206,7 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl, config)
+			router := NewRouter(impl)
 			router.MicropubHandler(w, r)
 
 			body, err := io.ReadAll(w.Result().Body)
@@ -252,7 +219,6 @@ func TestRouterPost(t *testing.T) {
 
 	t.Run("Valid Request, Implementation Errored", func(t *testing.T) {
 		for _, request := range validRequests {
-			config := &mockRouterConfiguration{}
 			impl := &mockRouterImplementation{}
 
 			magicError := errors.New("magic error")
@@ -276,7 +242,7 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl, config)
+			router := NewRouter(impl)
 			router.MicropubHandler(w, r)
 
 			body, err := io.ReadAll(w.Result().Body)
@@ -308,7 +274,6 @@ func TestRouterPost(t *testing.T) {
 				},
 			}
 
-			config := &mockRouterConfiguration{}
 			impl := &mockRouterImplementation{}
 			impl.Mock.On("HasScope", mock.Anything, "create").Return(true)
 			impl.Mock.On("Create", request).Return("", testCase.err)
@@ -317,7 +282,7 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(body)))
 			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-			router := NewRouter(impl, config)
+			router := NewRouter(impl)
 			router.MicropubHandler(w, r)
 			assert.Equal(t, testCase.status, w.Result().StatusCode)
 		}
@@ -325,14 +290,13 @@ func TestRouterPost(t *testing.T) {
 
 	t.Run("Invalid Requests", func(t *testing.T) {
 		for _, request := range invalidRequests {
-			config := &mockRouterConfiguration{}
 			impl := &mockRouterImplementation{}
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl, config)
+			router := NewRouter(impl)
 			router.MicropubHandler(w, r)
 
 			body, err := io.ReadAll(w.Result().Body)
