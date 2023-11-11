@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"mime/multipart"
 	"net/http"
 )
 
@@ -14,50 +13,36 @@ var (
 	ErrNotImplemented = errors.New("not implemented")
 )
 
-// RouterImplementation is the backend implementation necessary to run a Micropub
-// server with [Router].
-//
-// You must implement [RouterImplementation.HasScope]. The remaining functions
-// can return [ErrNotImplemented] if you don't support the feature.
-//
-// You can also return [ErrNotFound] and [ErrBadRequest] and the status
-// code, as well as JSON error, will be set accordingly.
-type RouterImplementation interface {
-	// HasScope returns whether or not the request is authorized for a certain scope.
-	HasScope(r *http.Request, scope string) bool
-
-	// UploadMedia uploads the given file with the given header. Must return the
-	// location (e.g., URL) of the uploaded file.
-	UploadMedia(file multipart.File, header *multipart.FileHeader) (string, error)
-
-	// Source returns the Microformats source of a certain URL.
-	Source(url string) (map[string]any, error)
-
-	// Create makes a create request according to the given [Request].
-	// Must return the location (e.g., URL) of the created post.
-	Create(req *Request) (string, error)
-
-	// Update makes an update request according to the given [Request].
-	// Must return the location (e.g., URL) of the update post.
-	Update(req *Request) (string, error)
-
-	// Delete deletes the post at the given URL.
-	Delete(url string) error
-
-	// Undelete undeletes the post at the given URL.
-	Undelete(url string) error
-}
-
 // Configuration is the configuration of a [Router]. Use the different [Option]
 // to customize your endpoint.
 type Configuration struct {
 	MediaEndpoint  string
-	MaxMediaSize   int64
 	GetSyndicateTo func() []Syndication
 	GetChannels    func() []Channel
 	GetCategories  func() []string
 	GetPostTypes   func() []PostType
 }
+
+// PostType is used to provide information regarding the server's [supported vocabulary].
+//
+// [supported vocabulary]: https://indieweb.org/Micropub-extensions#Query_for_Supported_Vocabulary
+type PostType struct {
+	Type       string   `json:"type"`
+	Name       string   `json:"name"`
+	Properties []string `json:"properties,omitempty"`
+	Required   []string `json:"required-properties,omitempty"`
+}
+
+type uidAndName struct {
+	UID  string `json:"uid"`
+	Name string `json:"name,omitempty"`
+}
+
+// Syndication represents a syndication target.
+type Syndication = uidAndName
+
+// Channel represents a channel.
+type Channel = uidAndName
 
 type Option func(*Configuration)
 
@@ -69,14 +54,6 @@ type Option func(*Configuration)
 func WithMediaEndpoint(endpoint string) Option {
 	return func(conf *Configuration) {
 		conf.MediaEndpoint = endpoint
-	}
-}
-
-// WithMaxMediaSize configures the maximum size of media uploads, in bytes. By
-// default it is 20 MiB.
-func WithMaxMediaSize(size int64) Option {
-	return func(conf *Configuration) {
-		conf.MaxMediaSize = size
 	}
 }
 
@@ -113,39 +90,58 @@ func WithGetPostTypes(getPostTypes func() []PostType) Option {
 	}
 }
 
-// PostType is part of [MicropubConfig] and used to provide information regarding
-// this server's [supported vocabulary].
+// Implementation is the backend implementation necessary to run a Micropub
+// server with [Router].
 //
-// [supported vocabulary]: https://indieweb.org/Micropub-extensions#Query_for_Supported_Vocabulary
-type PostType struct {
-	Type       string   `json:"type"`
-	Name       string   `json:"name"`
-	Properties []string `json:"properties,omitempty"`
-	Required   []string `json:"required-properties,omitempty"`
+// You must implement [Implementation.HasScope]. The remaining functions
+// can return [ErrNotImplemented] if you don't support the feature.
+//
+// You can also return [ErrNotFound] and [ErrBadRequest] and the status
+// code, as well as JSON error, will be set accordingly.
+type Implementation interface {
+	// HasScope returns whether or not the request is authorized for a certain scope.
+	HasScope(r *http.Request, scope string) bool
+
+	// Source returns the Microformats source of a certain URL.
+	Source(url string) (map[string]any, error)
+
+	// Create makes a create request according to the given [Request].
+	// Must return the location (e.g., URL) of the created post.
+	Create(req *Request) (string, error)
+
+	// Update makes an update request according to the given [Request].
+	// Must return the location (e.g., URL) of the update post.
+	Update(req *Request) (string, error)
+
+	// Delete deletes the post at the given URL.
+	Delete(url string) error
+
+	// Undelete reverts a deletion of the post at the given URL.
+	Undelete(url string) error
 }
 
-type uidAndName struct {
-	UID  string `json:"uid"`
-	Name string `json:"name,omitempty"`
-}
-
-// Syndication represents a syndication target.
-type Syndication = uidAndName
-
-// Channel represents a channel.
-type Channel = uidAndName
-
-type Router struct {
+type handler struct {
 	conf Configuration
-	impl RouterImplementation
+	impl Implementation
 }
 
-// NewRouter creates a new [Router] object with the given [RouterImplementation]
-// and the given [MicropubConfig]. The configuration is used to return to a Micropub
-// client when it requests for configuration.
-func NewRouter(impl RouterImplementation, options ...Option) *Router {
+// NewHandler creates a new Micropub [http.Handler] conforming to the [specification].
+// It uses the given [RouterImplementation] and [Option]s to handle the requests.
+//
+// The returned handler can be mounted under the path for a Micropub server. The
+// following routes are processed (assuming is mounted under /micropub):
+//
+//   - GET /micropub?q=source
+//   - GET /micropub?q=config
+//   - GET /micropub?q=syndicate-to
+//   - GET /micropub?q=category
+//   - GET /micropub?q=channel
+//   - POST /micropub (form-encoded): create, delete, undelete
+//   - POST /micropub (json): create, update, delete, undelete
+//
+// [specification]: https://micropub.spec.indieweb.org/
+func NewHandler(impl Implementation, options ...Option) http.Handler {
 	conf := &Configuration{
-		MaxMediaSize:   20 << 20,
 		MediaEndpoint:  "",
 		GetSyndicateTo: func() []Syndication { return nil },
 		GetChannels:    func() []Channel { return nil },
@@ -157,77 +153,61 @@ func NewRouter(impl RouterImplementation, options ...Option) *Router {
 		opt(conf)
 	}
 
-	return &Router{
+	return &handler{
 		conf: *conf,
 		impl: impl,
 	}
 }
 
-// MicropubHandler is an [http.HandlerFunc] that can be mounted under the path
-// for a micropub server handler. The following routes are processed:
-//
-//		GET /micropub?q=source
-//		GET /micropub?q=config
-//		GET /micropub?q=syndicate-to
-//		GET /micropub?q=category
-//		GET /micropub?q=channel
-//	 	POST /micropub
-//			- as form-encoded: create, delete, undelete
-//			- as json: create, update, delete, undelete
-//
-// The provided [RouterImplementation] and [RouterConfiguration] are used to
-// fulfill the requests according to the [specification].
-//
-// [specification]: https://micropub.spec.indieweb.org/
-func (ro *Router) MicropubHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		ro.micropubGet(w, r)
+		h.micropubGet(w, r)
 	case http.MethodPost:
-		ro.micropubPost(w, r)
+		h.micropubPost(w, r)
 	default:
 		serveError(w, ErrNotImplemented)
 	}
 }
 
-func (ro *Router) micropubGet(w http.ResponseWriter, r *http.Request) {
+func (h *handler) micropubGet(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Query().Get("q") {
 	case "source":
-		ro.micropubSource(w, r)
+		h.micropubSource(w, r)
 	case "config":
 		config := map[string]any{}
-		if ro.conf.MediaEndpoint != "" {
-			config["media-endpoint"] = ro.conf.MediaEndpoint
+		if h.conf.MediaEndpoint != "" {
+			config["media-endpoint"] = h.conf.MediaEndpoint
 		}
-		if syndicateTo := ro.conf.GetSyndicateTo(); len(syndicateTo) != 0 {
+		if syndicateTo := h.conf.GetSyndicateTo(); len(syndicateTo) != 0 {
 			config["syndicate-to"] = syndicateTo
 		}
-		if channels := ro.conf.GetChannels(); len(channels) != 0 {
+		if channels := h.conf.GetChannels(); len(channels) != 0 {
 			config["channels"] = channels
 		}
-		if categories := ro.conf.GetCategories(); len(categories) != 0 {
+		if categories := h.conf.GetCategories(); len(categories) != 0 {
 			config["categories"] = categories
 		}
-		if postTypes := ro.conf.GetPostTypes(); len(postTypes) != 0 {
+		if postTypes := h.conf.GetPostTypes(); len(postTypes) != 0 {
 			config["post-types"] = postTypes
 		}
 		serveJSON(w, http.StatusOK, config)
 	case "syndicate-to":
-		syndicateTo := ro.conf.GetSyndicateTo()
+		syndicateTo := h.conf.GetSyndicateTo()
 		if len(syndicateTo) == 0 {
 			serveError(w, ErrNotFound)
 		} else {
 			serveJSON(w, http.StatusOK, map[string]any{"syndicate-to": syndicateTo})
 		}
 	case "category":
-		categories := ro.conf.GetCategories()
+		categories := h.conf.GetCategories()
 		if len(categories) == 0 {
 			serveError(w, ErrNotFound)
 		} else {
 			serveJSON(w, http.StatusOK, map[string]any{"categories": categories})
 		}
 	case "channel":
-		channels := ro.conf.GetChannels()
+		channels := h.conf.GetChannels()
 		if len(channels) == 0 {
 			serveError(w, ErrNotFound)
 		} else {
@@ -238,14 +218,14 @@ func (ro *Router) micropubGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ro *Router) micropubSource(w http.ResponseWriter, r *http.Request) {
+func (h *handler) micropubSource(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
 	if url == "" {
 		serveError(w, fmt.Errorf("%w: request is missing 'url' query parameter", ErrBadRequest))
 		return
 	}
 
-	obj, err := ro.impl.Source(url)
+	obj, err := h.impl.Source(url)
 	if err != nil {
 		serveError(w, err)
 		return
@@ -254,7 +234,7 @@ func (ro *Router) micropubSource(w http.ResponseWriter, r *http.Request) {
 	serveJSON(w, http.StatusOK, obj)
 }
 
-func (ro *Router) micropubPost(w http.ResponseWriter, r *http.Request) {
+func (h *handler) micropubPost(w http.ResponseWriter, r *http.Request) {
 	mr, err := ParseRequest(r)
 	if err != nil {
 		serveError(w, errors.Join(ErrBadRequest, err))
@@ -263,40 +243,40 @@ func (ro *Router) micropubPost(w http.ResponseWriter, r *http.Request) {
 
 	switch mr.Action {
 	case ActionCreate:
-		if !ro.checkScope(w, r, "create") {
+		if !h.checkScope(w, r, "create") {
 			return
 		}
-		location, err := ro.impl.Create(mr)
+		location, err := h.impl.Create(mr)
 		if err != nil {
 			serveError(w, err)
 			return
 		}
 		http.Redirect(w, r, location, http.StatusAccepted)
 	case ActionUpdate:
-		if !ro.checkScope(w, r, "update") {
+		if !h.checkScope(w, r, "update") {
 			return
 		}
-		location, err := ro.impl.Update(mr)
+		location, err := h.impl.Update(mr)
 		if err != nil {
 			serveError(w, err)
 			return
 		}
 		http.Redirect(w, r, location, http.StatusOK)
 	case ActionDelete:
-		if !ro.checkScope(w, r, "delete") {
+		if !h.checkScope(w, r, "delete") {
 			return
 		}
-		err = ro.impl.Delete(mr.URL)
+		err = h.impl.Delete(mr.URL)
 		if err != nil {
 			serveError(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 	case ActionUndelete:
-		if !ro.checkScope(w, r, "undelete") {
+		if !h.checkScope(w, r, "undelete") {
 			return
 		}
-		err = ro.impl.Undelete(mr.URL)
+		err = h.impl.Undelete(mr.URL)
 		if err != nil {
 			serveError(w, err)
 			return
@@ -307,33 +287,13 @@ func (ro *Router) micropubPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// MicropubMediaHandler is an [http.HandlerFunc] that can be mounted under
-// the path for a micropub media server handler.
-func (ro *Router) MicropubMediaHandler(w http.ResponseWriter, r *http.Request) {
-	if !ro.checkScope(w, r, "media") {
-		return
+func (h *handler) checkScope(w http.ResponseWriter, r *http.Request, scope string) bool {
+	if !h.impl.HasScope(r, scope) {
+		serveErrorJSON(w, http.StatusForbidden, "insufficient_scope", "Insufficient scope.")
+		return false
 	}
 
-	err := r.ParseMultipartForm(ro.conf.MaxMediaSize)
-	if err != nil {
-		serveError(w, fmt.Errorf("%w: file is too large", ErrBadRequest))
-		return
-	}
-
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		serveError(w, errors.Join(ErrBadRequest, err))
-		return
-	}
-	defer file.Close()
-
-	redirect, err := ro.impl.UploadMedia(file, header)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-
-	http.Redirect(w, r, redirect, http.StatusCreated)
+	return true
 }
 
 func serveError(w http.ResponseWriter, err error) {
@@ -359,13 +319,4 @@ func serveErrorJSON(w http.ResponseWriter, code int, err, errDescription string)
 		"error":             err,
 		"error_description": errDescription,
 	})
-}
-
-func (ro *Router) checkScope(w http.ResponseWriter, r *http.Request, scope string) bool {
-	if !ro.impl.HasScope(r, scope) {
-		serveErrorJSON(w, http.StatusForbidden, "insufficient_scope", "Insufficient scope.")
-		return false
-	}
-
-	return true
 }

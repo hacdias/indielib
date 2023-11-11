@@ -16,6 +16,7 @@ var (
 	ErrMultipleTypes  = errors.New("type must have a single value")
 )
 
+// Action represents a Micropub action.
 type Action string
 
 const (
@@ -31,6 +32,7 @@ type RequestUpdate struct {
 	Delete  any
 }
 
+// Request describes a Micropub request.
 type Request struct {
 	Action     Action
 	URL        string
