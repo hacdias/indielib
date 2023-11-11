@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>IndieAuth Server Demo</title>
+  </head>
+  <body>
+    <h1>IndieAuth Server Demo: Authorization</h1>
+
+    <p>You received an authorization request from the following client:</p>
+    <ul>
+      <li><strong>Redirect:</strong> <code>{{ .ClientID }}</code></li>
+      <li><strong>Client:</strong> <code>{{ .RedirectURI }}</code></li>
+    </ul>
+
+    <p>For the following scopes:{{ range .Scopes}} <code>{{ . }}</code>{{ end }}.</p>
+
+    <form method='post' action='/authorization/accept'>
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="scopes" value="{{ .Scopes }}">
+      <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}">
+      <input type="hidden" name="client_id" value="{{ .ClientID }}">
+      <input type="hidden" name="state" value="{{ .State }}">
+      <input type="hidden" name="code_challenge" value="{{ .CodeChallenge }}">
+      <input type="hidden" name="code_challenge_method" value="{{ .CodeChallengeMethod }}">
+
+      <p>In a production server, this page could be behind some sort of authentication mechanism, such as username and password, PassKey, etc.</p>
+
+      <button id=submit>Authorize</button>
+    </form>
+  </body>
+</html>
