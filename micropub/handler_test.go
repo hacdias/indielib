@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,15 +14,10 @@ import (
 
 type mockRouterImplementation struct{ mock.Mock }
 
-var _ RouterImplementation = &mockRouterImplementation{}
+var _ Implementation = &mockRouterImplementation{}
 
 func (m *mockRouterImplementation) HasScope(r *http.Request, scope string) bool {
 	return m.Called(r, scope).Get(0).(bool)
-}
-
-func (m *mockRouterImplementation) UploadMedia(file multipart.File, header *multipart.FileHeader) (string, error) {
-	args := m.Called(file, header)
-	return args.Get(0).(string), args.Error(1)
 }
 
 func (m *mockRouterImplementation) Source(url string) (map[string]any, error) {
@@ -58,8 +52,8 @@ func TestRouterGet(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source", nil)
 
-		router := NewRouter(impl)
-		router.MicropubHandler(w, r)
+		handler := NewHandler(impl)
+		handler.ServeHTTP(w, r)
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})
 
@@ -70,8 +64,8 @@ func TestRouterGet(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source&url=https://example.com/1", nil)
 
-		router := NewRouter(impl)
-		router.MicropubHandler(w, r)
+		handler := NewHandler(impl)
+		handler.ServeHTTP(w, r)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		body, err := io.ReadAll(w.Result().Body)
 		assert.NoError(t, err)
@@ -90,9 +84,8 @@ func TestRouterGet(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=config", nil)
 
-		router := NewRouter(impl, options...)
-
-		router.MicropubHandler(w, r)
+		handler := NewHandler(impl, options...)
+		handler.ServeHTTP(w, r)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		body, err := io.ReadAll(w.Result().Body)
 		assert.NoError(t, err)
@@ -118,8 +111,8 @@ func TestRouterGet(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/micropub"+testCase.query, nil)
 
-			router := NewRouter(impl, testCase.options...)
-			router.MicropubHandler(w, r)
+			handler := NewHandler(impl, testCase.options...)
+			handler.ServeHTTP(w, r)
 			assert.Equal(t, testCase.expectedStatus, w.Result().StatusCode)
 
 			if testCase.expectedBody != nil {
@@ -136,8 +129,8 @@ func TestRouterGet(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=blah", nil)
 
-		router := NewRouter(impl)
-		router.MicropubHandler(w, r)
+		handler := NewHandler(impl)
+		handler.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 	})
@@ -169,8 +162,8 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl)
-			router.MicropubHandler(w, r)
+			handler := NewHandler(impl)
+			handler.ServeHTTP(w, r)
 
 			switch request.response.Action {
 			case ActionCreate:
@@ -206,8 +199,8 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl)
-			router.MicropubHandler(w, r)
+			handler := NewHandler(impl)
+			handler.ServeHTTP(w, r)
 
 			body, err := io.ReadAll(w.Result().Body)
 			assert.NoError(t, err)
@@ -242,8 +235,8 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl)
-			router.MicropubHandler(w, r)
+			handler := NewHandler(impl)
+			handler.ServeHTTP(w, r)
 
 			body, err := io.ReadAll(w.Result().Body)
 			assert.NoError(t, err)
@@ -282,8 +275,8 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(body)))
 			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-			router := NewRouter(impl)
-			router.MicropubHandler(w, r)
+			handler := NewHandler(impl)
+			handler.ServeHTTP(w, r)
 			assert.Equal(t, testCase.status, w.Result().StatusCode)
 		}
 	})
@@ -296,8 +289,8 @@ func TestRouterPost(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))
 			r.Header.Set("Content-Type", request.contentType)
 
-			router := NewRouter(impl)
-			router.MicropubHandler(w, r)
+			handler := NewHandler(impl)
+			handler.ServeHTTP(w, r)
 
 			body, err := io.ReadAll(w.Result().Body)
 			assert.NoError(t, err)
