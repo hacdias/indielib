@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Micropub: the keys of Request.Commands no longer start with `mp-`.
+
 ### Deprecated
 
 ### Removed

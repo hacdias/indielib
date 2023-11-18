@@ -90,7 +90,7 @@ func parseFormEncoded(body url.Values) (*Request, error) {
 			key = strings.TrimSuffix(key, "[]")
 
 			if strings.HasPrefix(key, "mp-") {
-				req.Commands[key] = asAnySlice(val)
+				req.Commands[strings.TrimPrefix(key, "mp-")] = asAnySlice(val)
 			} else {
 				req.Properties[key] = asAnySlice(val)
 			}
@@ -142,7 +142,7 @@ func parseJSON(body requestJSON) (*Request, error) {
 
 		for key, value := range body.Properties {
 			if strings.HasPrefix(key, "mp-") {
-				req.Commands[key] = value
+				req.Commands[strings.TrimPrefix(key, "mp-")] = value
 			} else {
 				req.Properties[key] = value
 			}
