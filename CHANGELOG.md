@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add support for [Visibility](https://indieweb.org/Micropub-extensions#Visibility) in the configuration.
+- Micropub: add support for [Visibility](https://indieweb.org/Micropub-extensions#Visibility) in the configuration.
+- Micropub: add support for [Post Listing](https://indieweb.org/Micropub-extensions#Query_for_Post_List), which involves adding a new function to the Implementation interface.
 
 ### Changed
 

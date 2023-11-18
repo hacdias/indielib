@@ -47,6 +47,10 @@ func (s *micropubImplementation) Source(urlStr string) (map[string]any, error) {
 	return nil, micropub.ErrNotFound
 }
 
+func (s *micropubImplementation) SourceMany(limit, offset int) ([]map[string]any, error) {
+	return nil, micropub.ErrNotImplemented
+}
+
 func (s *micropubImplementation) Create(req *micropub.Request) (string, error) {
 	newPath := "/" + time.Now().Format(time.RFC3339)
 

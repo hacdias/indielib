@@ -25,6 +25,11 @@ func (m *mockRouterImplementation) Source(url string) (map[string]any, error) {
 	return args.Get(0).(map[string]any), args.Error(1)
 }
 
+func (m *mockRouterImplementation) SourceMany(limit, offset int) ([]map[string]any, error) {
+	args := m.Called(limit, offset)
+	return args.Get(0).([]map[string]any), args.Error(1)
+}
+
 func (m *mockRouterImplementation) Create(req *Request) (string, error) {
 	args := m.Called(req)
 	return args.Get(0).(string), args.Error(1)
@@ -46,11 +51,60 @@ func (m *mockRouterImplementation) Undelete(url string) error {
 func TestRouterGet(t *testing.T) {
 	t.Parallel()
 
-	t.Run("?q=source (missing URL)", func(t *testing.T) {
+	t.Run("?q=source (list posts, default params)", func(t *testing.T) {
 		impl := &mockRouterImplementation{}
+		impl.Mock.On("SourceMany", -1, 0).Return([]map[string]any{
+			{"type": "h-entry", "properties": map[string][]any{"name": {"A"}}},
+			{"type": "h-entry", "properties": map[string][]any{"name": {"B"}}},
+			{"type": "h-entry", "properties": map[string][]any{"name": {"C"}}},
+		}, nil)
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source", nil)
+
+		handler := NewHandler(impl)
+		handler.ServeHTTP(w, r)
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+		body, err := io.ReadAll(w.Result().Body)
+		assert.NoError(t, err)
+		assert.EqualValues(t, `{"items":[{"properties":{"name":["A"]},"type":"h-entry"},{"properties":{"name":["B"]},"type":"h-entry"},{"properties":{"name":["C"]},"type":"h-entry"}]}`+"\n", string(body))
+	})
+
+	t.Run("?q=source&limit&offset (list posts, good params)", func(t *testing.T) {
+		impl := &mockRouterImplementation{}
+		impl.Mock.On("SourceMany", 3, 10).Return([]map[string]any{
+			{"type": "h-entry", "properties": map[string][]any{"name": {"A"}}},
+			{"type": "h-entry", "properties": map[string][]any{"name": {"B"}}},
+			{"type": "h-entry", "properties": map[string][]any{"name": {"C"}}},
+		}, nil)
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source&limit=3&offset=10", nil)
+
+		handler := NewHandler(impl)
+		handler.ServeHTTP(w, r)
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+		body, err := io.ReadAll(w.Result().Body)
+		assert.NoError(t, err)
+		assert.EqualValues(t, `{"items":[{"properties":{"name":["A"]},"type":"h-entry"},{"properties":{"name":["B"]},"type":"h-entry"},{"properties":{"name":["C"]},"type":"h-entry"}]}`+"\n", string(body))
+	})
+
+	t.Run("?q=source&limit&offset (list posts, bad limit)", func(t *testing.T) {
+		impl := &mockRouterImplementation{}
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source&limit=badLimit&offset=10", nil)
+
+		handler := NewHandler(impl)
+		handler.ServeHTTP(w, r)
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+
+	t.Run("?q=source&limit&offset (list posts, bad offset)", func(t *testing.T) {
+		impl := &mockRouterImplementation{}
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=source&limit=10&offset=badOffset", nil)
 
 		handler := NewHandler(impl)
 		handler.ServeHTTP(w, r)
