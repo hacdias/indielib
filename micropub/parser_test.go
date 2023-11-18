@@ -56,7 +56,7 @@ var (
 				Action: ActionCreate,
 				Type:   "h-entry",
 				Commands: map[string][]any{
-					"mp-command": {"blah"},
+					"command": {"blah"},
 				},
 				Properties: map[string][]any{
 					"content": {"hello world"},
@@ -99,7 +99,7 @@ var (
 				Action: ActionCreate,
 				Type:   "h-entry",
 				Commands: map[string][]any{
-					"mp-command": {"blah"},
+					"command": {"blah"},
 				},
 				Properties: map[string][]any{
 					"category": {"foo", "bar"},
