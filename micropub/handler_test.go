@@ -79,6 +79,9 @@ func TestRouterGet(t *testing.T) {
 			WithGetCategories(func() []string {
 				return []string{"a", "b"}
 			}),
+			WithGetVisibility(func() []string {
+				return []string{"public"}
+			}),
 		}
 
 		w := httptest.NewRecorder()
@@ -89,7 +92,7 @@ func TestRouterGet(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		body, err := io.ReadAll(w.Result().Body)
 		assert.NoError(t, err)
-		assert.EqualValues(t, `{"categories":["a","b"],"media-endpoint":"https://example.com/media"}`+"\n", string(body))
+		assert.EqualValues(t, `{"categories":["a","b"],"media-endpoint":"https://example.com/media","visibility":["public"]}`+"\n", string(body))
 	})
 
 	t.Run("?q=category, syndicate-to, channel", func(t *testing.T) {
@@ -299,5 +302,4 @@ func TestRouterPost(t *testing.T) {
 			assert.Contains(t, string(body), "invalid_request")
 		}
 	})
-
 }

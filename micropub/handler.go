@@ -21,6 +21,7 @@ type Configuration struct {
 	GetChannels    func() []Channel
 	GetCategories  func() []string
 	GetPostTypes   func() []PostType
+	GetVisibility  func() []string
 }
 
 // PostType is used to provide information regarding the server's [supported vocabulary].
@@ -87,6 +88,16 @@ func WithGetCategories(getCategories func() []string) Option {
 func WithGetPostTypes(getPostTypes func() []PostType) Option {
 	return func(conf *Configuration) {
 		conf.GetPostTypes = getPostTypes
+	}
+}
+
+// WithGetVisibility configures the getter for supported [visibility]. Return an
+// empty slice if there are no channels.
+//
+// [visibility]: https://indieweb.org/Micropub-extensions#Visibility
+func WithGetVisibility(getVisibility func() []string) Option {
+	return func(conf *Configuration) {
+		conf.GetVisibility = getVisibility
 	}
 }
 
@@ -190,6 +201,9 @@ func (h *handler) micropubGet(w http.ResponseWriter, r *http.Request) {
 		}
 		if postTypes := h.conf.GetPostTypes(); len(postTypes) != 0 {
 			config["post-types"] = postTypes
+		}
+		if visibility := h.conf.GetVisibility(); len(visibility) != 0 {
+			config["visibility"] = visibility
 		}
 		serveJSON(w, http.StatusOK, config)
 	case "syndicate-to":
