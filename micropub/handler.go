@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 var (
@@ -115,6 +116,13 @@ type Implementation interface {
 
 	// Source returns the Microformats source of a certain URL.
 	Source(url string) (map[string]any, error)
+
+	// Source all returns the Microformats source for a [limit] amount of posts,
+	// offset by the given [offset]. Used to implement [post list]. Limit will be
+	// -1 by default, and offset 0.
+	//
+	// [post list]: https://indieweb.org/Micropub-extensions#Query_for_Post_List
+	SourceMany(limit, offset int) ([]map[string]any, error)
 
 	// Create makes a create request according to the given [Request].
 	// Must return the location (e.g., URL) of the created post.
@@ -235,17 +243,47 @@ func (h *handler) micropubGet(w http.ResponseWriter, r *http.Request) {
 func (h *handler) micropubSource(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
 	if url == "" {
-		serveError(w, fmt.Errorf("%w: request is missing 'url' query parameter", ErrBadRequest))
+		limitStr := r.URL.Query().Get("limit")
+		if limitStr == "" {
+			limitStr = "-1"
+		}
+
+		offsetStr := r.URL.Query().Get("offset")
+		if offsetStr == "" {
+			offsetStr = "0"
+		}
+
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			serveError(w, errors.Join(ErrBadRequest, err))
+			return
+		}
+
+		offset, err := strconv.Atoi(offsetStr)
+		if err != nil {
+			serveError(w, errors.Join(ErrBadRequest, err))
+			return
+		}
+
+		items, err := h.impl.SourceMany(limit, offset)
+		if err != nil {
+			serveError(w, err)
+			return
+		}
+
+		serveJSON(w, http.StatusOK, map[string]any{
+			"items": items,
+		})
 		return
 	}
 
-	obj, err := h.impl.Source(url)
+	item, err := h.impl.Source(url)
 	if err != nil {
 		serveError(w, err)
 		return
 	}
 
-	serveJSON(w, http.StatusOK, obj)
+	serveJSON(w, http.StatusOK, item)
 }
 
 func (h *handler) micropubPost(w http.ResponseWriter, r *http.Request) {
