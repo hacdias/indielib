@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Micropub: the `WithMaxMediaSize` option for the media handler is now properly honoured.
+- Micropub: the `WithMaxMediaSize` option for the media handler is now properly honoured. Thanks [@jlelse](https://jlelse.blog/) for reporting this.
 
 ### Security
 
