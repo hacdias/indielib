@@ -59,7 +59,7 @@ func NewMediaHandler(mediaUploader MediaUploader, scopeChecker ScopeChecker, opt
 			r.Body = http.MaxBytesReader(w, r.Body, conf.MaxMediaSize)
 		}
 
-		err := r.ParseMultipartForm(conf.MaxMediaSize)
+		err := r.ParseMultipartForm(0)
 		if err != nil {
 			serveError(w, fmt.Errorf("%w: %w", ErrBadRequest, err))
 			return
