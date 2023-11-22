@@ -21,19 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.2]
 
-### Added
-
-### Changed
-
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Micropub: fixes panic when `WithGetVisibility` was not provided.
-
-### Security
 
 ## [0.2.1]
 
@@ -41,17 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Micropub: new `WithMaxMemory` added for the media handler.
 
-### Changed
-
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Micropub: the `WithMaxMediaSize` option for the media handler is now properly honoured. Thanks [@jlelse](https://jlelse.blog/) for reporting this.
-
-### Security
 
 ## [0.2.0]
 
@@ -63,14 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Micropub: the keys of Request.Commands no longer start with `mp-`.
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.1.0]
 
