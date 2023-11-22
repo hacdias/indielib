@@ -23,6 +23,7 @@ type ScopeChecker func(r *http.Request, scope string) bool
 // MediaConfiguration is the configuration for a media handler.
 type MediaConfiguration struct {
 	MaxMediaSize int64
+	MaxMemory    int64
 }
 
 // MediaOption is an option that configures [MediaConfiguration].
@@ -31,6 +32,15 @@ type MediaOption func(*MediaConfiguration)
 // WithMaxMediaSize configures the maximum size of media uploads, in bytes. By
 // default it is 20 MiB.
 func WithMaxMediaSize(size int64) MediaOption {
+	return func(conf *MediaConfiguration) {
+		conf.MaxMediaSize = size
+	}
+}
+
+// WithMaxMemory configures how much of the uploads are kept in memory. See
+// [http.Request.ParseMultipartForm] for more details. By default it is 0, meaning
+// that the upload is kept in temporary files.
+func WithMaxMemory(size int64) MediaOption {
 	return func(conf *MediaConfiguration) {
 		conf.MaxMediaSize = size
 	}
@@ -59,7 +69,7 @@ func NewMediaHandler(mediaUploader MediaUploader, scopeChecker ScopeChecker, opt
 			r.Body = http.MaxBytesReader(w, r.Body, conf.MaxMediaSize)
 		}
 
-		err := r.ParseMultipartForm(conf.MaxMediaSize)
+		err := r.ParseMultipartForm(conf.MaxMemory)
 		if err != nil {
 			serveError(w, fmt.Errorf("%w: %w", ErrBadRequest, err))
 			return
