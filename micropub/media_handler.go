@@ -55,9 +55,13 @@ func NewMediaHandler(mediaUploader MediaUploader, scopeChecker ScopeChecker, opt
 			return
 		}
 
+		if conf.MaxMediaSize != 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, conf.MaxMediaSize)
+		}
+
 		err := r.ParseMultipartForm(conf.MaxMediaSize)
 		if err != nil {
-			serveError(w, fmt.Errorf("%w: file is too large", ErrBadRequest))
+			serveError(w, fmt.Errorf("%w: %w", ErrBadRequest, err))
 			return
 		}
 
