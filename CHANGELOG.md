@@ -19,6 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.2.2]
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Micropub: fixes panic when `WithGetVisibility` was not provided.
+
+### Security
+
 ## [0.2.1]
 
 ### Added

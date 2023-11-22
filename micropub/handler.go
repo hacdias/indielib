@@ -166,6 +166,7 @@ func NewHandler(impl Implementation, options ...Option) http.Handler {
 		GetChannels:    func() []Channel { return nil },
 		GetCategories:  func() []string { return nil },
 		GetPostTypes:   func() []PostType { return nil },
+		GetVisibility:  func() []string { return nil },
 	}
 
 	for _, opt := range options {
