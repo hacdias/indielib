@@ -19,6 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.2.1]
+
+### Added
+
+- Micropub: new `WithMaxMemory` added for the media handler.
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Micropub: the `WithMaxMediaSize` option for the media handler is now properly honoured.
+
+### Security
+
 ## [0.2.0]
 
 ### Added
