@@ -226,13 +226,17 @@ func TestRouterPost(t *testing.T) {
 			case ActionCreate:
 				assert.Equal(t, "https://example.org/1", w.Result().Header.Get("Location"))
 				assert.Equal(t, http.StatusAccepted, w.Result().StatusCode)
+				assert.Equal(t, "text/plain", w.Result().Header.Get("Content-Type"))
 			case ActionUpdate:
 				assert.Equal(t, request.response.URL, w.Result().Header.Get("Location"))
 				assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+				assert.Equal(t, "", w.Result().Header.Get("Content-Type"))
 			case ActionDelete:
 				assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+				assert.Equal(t, "", w.Result().Header.Get("Content-Type"))
 			case ActionUndelete:
 				assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+				assert.Equal(t, "", w.Result().Header.Get("Content-Type"))
 			}
 		}
 	})

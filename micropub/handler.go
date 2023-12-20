@@ -304,6 +304,7 @@ func (h *handler) micropubPost(w http.ResponseWriter, r *http.Request) {
 			serveError(w, err)
 			return
 		}
+		w.Header().Set("Content-Type", "text/plain")
 		http.Redirect(w, r, location, http.StatusAccepted)
 	case ActionUpdate:
 		if !h.checkScope(w, r, "update") {
