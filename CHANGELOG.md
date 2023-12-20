@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.2.3]
+
+### Changed
+
+- Micropub: set `text/plain` content-type on Micropub create responses, allowing for compatibility with clients that expect it, such as [Sparkles](https://sparkles.sploot.com/).
+
 ## [0.2.2]
 
 ### Fixed
