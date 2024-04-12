@@ -139,11 +139,19 @@ func (s *server) authorizationGetHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Do a best effort attempt at fetching more information about the application
+	// that we can show to the user. Not all applications provide this sort of
+	// information.
+	app, _ := s.ias.DiscoverApplicationMetadata(r.Context(), req.ClientID)
+
 	// Here, we just display a small HTML document where the user has to press
 	// to authorize this request. Please note that this template contains a form
 	// where we dump all the request information. This makes it possible to reuse
 	// [indieauth.Server.ParseAuthorization] when the user authorizes the request.
-	serveHTML(w, "auth.html", req)
+	serveHTML(w, "auth.html", map[string]any{
+		"Request":     req,
+		"Application": app,
+	})
 }
 
 // authorizationPostHandler handles the POST method for the authorization endpoint.

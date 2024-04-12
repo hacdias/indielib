@@ -365,3 +365,134 @@ func (rt *handlerRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 	}
 	return nil, errors.New("no handler")
 }
+
+func TestDiscoverApplicationMetadata(t *testing.T) {
+	for _, testCase := range []struct {
+		clientID string
+		body     string
+		expected ApplicationMetadata
+	}{
+		{
+			clientID: "https://example.com/",
+			body: `
+		<div class="h-x-app">
+			<img src="/logo.png" class="u-logo">
+			<a href="/" class="u-url p-name">Example App</a>
+		</div>`,
+			expected: ApplicationMetadata{
+				Name: "Example App",
+				Logo: "https://example.com/logo.png",
+				URL:  "https://example.com/",
+			},
+		},
+		{
+			clientID: "https://example.com/",
+			body: `
+		<div class="h-app">
+			<img src="/logo.png" class="u-logo">
+			<a href="/" class="u-url p-name">Example App</a>
+			<a href="/" class="u-url p-name">Example App 2</a>
+			<p class="p-author">Example Author</a>
+		</div>`,
+			expected: ApplicationMetadata{
+				Name:   "Example App",
+				Logo:   "https://example.com/logo.png",
+				URL:    "https://example.com/",
+				Author: "Example Author",
+			},
+		},
+		{
+			clientID: "https://example.com/",
+			body: `
+		<div class="something-else h-app">
+			<img src="/logo.png" class="u-photo">
+			<a href="/" class="u-url p-name">Example App</a>
+		</div>`,
+			expected: ApplicationMetadata{
+				Name: "Example App",
+				Logo: "https://example.com/logo.png",
+				URL:  "https://example.com/",
+			},
+		},
+		{
+			clientID: "https://example.com/",
+			body: `
+		<div class="something-else h-app">
+			<img src="/logo.png" class="u-logo p-name" alt="Example App">
+		</div>`,
+			expected: ApplicationMetadata{
+				Name: "Example App",
+				Logo: "https://example.com/logo.png",
+			},
+		},
+	} {
+		httpClient := &http.Client{
+			Transport: &handlerRoundTripper{
+				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.String() != testCase.clientID {
+						w.WriteHeader(http.StatusExpectationFailed)
+						return
+					}
+					w.Header().Set("Content-Type", "text/html; charset=utf-8")
+					_, _ = w.Write([]byte(testCase.body))
+				}),
+			},
+		}
+
+		server := NewServer(false, httpClient)
+		data, err := server.DiscoverApplicationMetadata(context.Background(), testCase.clientID)
+		assert.Nil(t, err)
+		assert.Equal(t, testCase.expected.Name, data.Name)
+		assert.Equal(t, testCase.expected.Logo, data.Logo)
+		assert.Equal(t, testCase.expected.URL, data.URL)
+		assert.Equal(t, testCase.expected.Summary, data.Summary)
+		assert.Equal(t, testCase.expected.Author, data.Author)
+	}
+}
+
+func TestDiscoverApplicationMetadataError(t *testing.T) {
+	for _, testCase := range []struct {
+		clientID string
+		body     string
+		err      error
+	}{
+		{
+			clientID: "https://example.com/",
+			body:     `<div class="h-x-app"><p class="p-name"></p></div>`,
+			err:      ErrNoApplicationMetadata,
+		},
+		{
+			clientID: "https://example.com/",
+			body:     `<div class="h-app"><p class="p-name"></p></div>`,
+			err:      ErrNoApplicationMetadata,
+		},
+		{
+			clientID: "https://example.com/",
+			body:     `<div class="h-not-app"><p class="p-name">Example App</p></div>`,
+			err:      ErrNoApplicationMetadata,
+		},
+		{
+			clientID: "https://example.com/",
+			body:     ``,
+			err:      ErrNoApplicationMetadata,
+		},
+	} {
+		httpClient := &http.Client{
+			Transport: &handlerRoundTripper{
+				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.String() != testCase.clientID {
+						w.WriteHeader(http.StatusExpectationFailed)
+						return
+					}
+					w.Header().Set("Content-Type", "text/html; charset=utf-8")
+					_, _ = w.Write([]byte(testCase.body))
+				}),
+			},
+		}
+
+		server := NewServer(false, httpClient)
+		data, err := server.DiscoverApplicationMetadata(context.Background(), testCase.clientID)
+		assert.ErrorIs(t, err, testCase.err)
+		assert.Nil(t, data)
+	}
+}

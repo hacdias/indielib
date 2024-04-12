@@ -6,22 +6,31 @@
   <body>
     <h1>IndieAuth Server Demo: Authorization</h1>
 
-    <p>You received an authorization request from the following client:</p>
+    <p>
+      You received an authorization request from
+      {{ with .Application }}
+        {{ with .Logo }}<img style='width: 1em; vertical-align: middle;' src="{{ . }}">{{ end }}
+        <strong>{{ .Name }}</strong>{{ with .Author }} by {{ . }}{{ end }}:
+      {{ else }}
+        the following client:
+      {{ end }}
+    </p>
+
     <ul>
-      <li><strong>Redirect:</strong> <code>{{ .ClientID }}</code></li>
-      <li><strong>Client:</strong> <code>{{ .RedirectURI }}</code></li>
+      <li><strong>Redirect:</strong> <code>{{ .Request.ClientID }}</code></li>
+      <li><strong>Client:</strong> <code>{{ .Request.RedirectURI }}</code></li>
     </ul>
 
-    <p>For the following scopes:{{ range .Scopes}} <code>{{ . }}</code>{{ end }}.</p>
+    <p>For the following scopes:{{ range .Request.Scopes}} <code>{{ . }}</code>{{ end }}.</p>
 
     <form method='post' action='/authorization/accept'>
       <input type="hidden" name="response_type" value="code">
-      <input type="hidden" name="scope" value="{{ range .Scopes}} {{ . }}{{ end }}">
-      <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}">
-      <input type="hidden" name="client_id" value="{{ .ClientID }}">
-      <input type="hidden" name="state" value="{{ .State }}">
-      <input type="hidden" name="code_challenge" value="{{ .CodeChallenge }}">
-      <input type="hidden" name="code_challenge_method" value="{{ .CodeChallengeMethod }}">
+      <input type="hidden" name="scope" value="{{ range .Request.Scopes}} {{ . }}{{ end }}">
+      <input type="hidden" name="redirect_uri" value="{{ .Request.RedirectURI }}">
+      <input type="hidden" name="client_id" value="{{ .Request.ClientID }}">
+      <input type="hidden" name="state" value="{{ .Request.State }}">
+      <input type="hidden" name="code_challenge" value="{{ .Request.CodeChallenge }}">
+      <input type="hidden" name="code_challenge_method" value="{{ .Request.CodeChallengeMethod }}">
 
       <p>In a production server, this page could be behind some sort of authentication mechanism, such as username and password, PassKey, etc.</p>
 
