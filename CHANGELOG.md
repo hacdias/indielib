@@ -11,9 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- IndieAuth: added `context.Context` as argument to all functions that perform HTTP requests.
-- IndieAuth: added `DiscoverApplicationMetadata` to the `Server`, which implements the [Application Information Discovery](https://indieauth.spec.indieweb.org/#application-information).
-
 ### Deprecated
 
 ### Removed
@@ -21,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## [0.3.0]
+
+### Changed
+
+- IndieAuth: added `context.Context` as argument to all functions that perform HTTP requests.
+- IndieAuth: added `DiscoverApplicationMetadata` to the `Server`, which implements the [Application Information Discovery](https://indieauth.spec.indieweb.org/#application-information).
 
 ## [0.2.3]
 
