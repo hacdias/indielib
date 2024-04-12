@@ -1,6 +1,7 @@
 package indieauth
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +32,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 		)
 
-		_, _, err := client.Authenticate("https://example.com/", "profile post")
+		_, _, err := client.Authenticate(context.Background(), "https://example.com/", "profile post")
 		require.Error(t, err)
 	})
 
@@ -62,7 +63,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 		)
 
-		authInfo, redirect, err := client.Authenticate("https://example.com/", "profile post")
+		authInfo, redirect, err := client.Authenticate(context.Background(), "https://example.com/", "profile post")
 		require.Nil(t, err)
 		require.NotNil(t, authInfo)
 		require.Equal(t, "https://example.com/", authInfo.Me)
@@ -219,7 +220,7 @@ func TestGetToken(t *testing.T) {
 		CodeVerifier: codeVerifier,
 	}
 
-	token, conf, err := client.GetToken(authInfo, code)
+	token, conf, err := client.GetToken(context.Background(), authInfo, code)
 	require.Nil(t, err)
 	require.NotNil(t, conf)
 	require.NotNil(t, token)
@@ -305,7 +306,7 @@ func TestFetchProfile(t *testing.T) {
 		CodeVerifier: codeVerifier,
 	}
 
-	profile, err := client.FetchProfile(authInfo, code)
+	profile, err := client.FetchProfile(context.Background(), authInfo, code)
 	require.Nil(t, err)
 	require.EqualValues(t, originalProfile, profile)
 }

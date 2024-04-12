@@ -1,6 +1,7 @@
 package indieauth
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +35,7 @@ func TestDiscoverMetadata(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -59,7 +60,7 @@ func TestDiscoverMetadataNoToken(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -82,7 +83,7 @@ func TestDiscoverMetadataNoAuthorization(t *testing.T) {
 		},
 	)
 
-	_, err := client.DiscoverMetadata("https://example.org/")
+	_, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.EqualValues(t, err, ErrNoEndpointFound)
 }
 
@@ -101,7 +102,7 @@ func TestDiscoverMetadataHTTPLink(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -129,7 +130,7 @@ func TestDiscoverMetadataBody(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -157,7 +158,7 @@ func TestDiscoverMetadataMixed(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -186,7 +187,7 @@ func TestDiscoverMetadataUsesFirst(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -220,7 +221,7 @@ func TestDiscoverMetadataHead(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -244,7 +245,7 @@ func TestDiscoverEndpointExists(t *testing.T) {
 		},
 	)
 
-	endpoint, err := client.DiscoverLinkEndpoint("https://example.org/", "test")
+	endpoint, err := client.DiscoverLinkEndpoint(context.Background(), "https://example.org/", "test")
 	assert.Nil(t, err)
 	assert.EqualValues(t, "https://example.org/", endpoint)
 }
@@ -263,7 +264,7 @@ func TestDiscoverEndpointNotExists(t *testing.T) {
 		},
 	)
 
-	_, err := client.DiscoverLinkEndpoint("https://example.org/", "test")
+	_, err := client.DiscoverLinkEndpoint(context.Background(), "https://example.org/", "test")
 	assert.EqualValues(t, err, ErrNoEndpointFound)
 }
 
@@ -290,7 +291,7 @@ func TestDiscoverEndpointHeadErrors(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -319,7 +320,7 @@ func TestDiscoverEndpointGetErrors(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.Nil(t, err)
 	assert.NotNil(t, endpoints)
 	if endpoints != nil {
@@ -342,7 +343,7 @@ func TestDiscoverEndpointHeadGetError(t *testing.T) {
 		},
 	)
 
-	endpoints, err := client.DiscoverMetadata("https://example.org/")
+	endpoints, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
 	assert.NotNil(t, err)
 	assert.Nil(t, endpoints)
 }
