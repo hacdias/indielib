@@ -94,14 +94,14 @@ type client struct {
 }
 
 // indexHandler serves a simple index page with a login form.
-func (s *client) indexHandler(w http.ResponseWriter, r *http.Request) {
+func (c *client) indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(indexTemplate))
 }
 
 // loginHandler handles the login process after submitting the domain via the
 // index page.
-func (s *client) loginHandler(w http.ResponseWriter, r *http.Request) {
+func (c *client) loginHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -125,7 +125,7 @@ func (s *client) loginHandler(w http.ResponseWriter, r *http.Request) {
 	// Generates the redirect request to the target profile so that the user can
 	// authorize the request. We also ask for the "profile" and "email" scope so
 	// that we can get more information about the user.
-	authInfo, redirect, err := s.iac.Authenticate(r.Context(), profileURL, "profile email")
+	authInfo, redirect, err := c.iac.Authenticate(r.Context(), profileURL, "profile email")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -133,7 +133,7 @@ func (s *client) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// We store the authInfo in a cookie. This information will be later needed
 	// to validate the callback request from the authentication server.
-	err = s.storeAuthInfo(w, r, authInfo)
+	err = c.storeAuthInfo(w, r, authInfo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -144,16 +144,16 @@ func (s *client) loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // callbackHandler handles the callback from the authentication server.
-func (s *client) callbackHandler(w http.ResponseWriter, r *http.Request) {
+func (c *client) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the authentication info from the cookie.
-	authInfo, err := s.getAuthInfo(w, r)
+	authInfo, err := c.getAuthInfo(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Validate the callback using authInfo and the current request.
-	code, err := s.iac.ValidateCallback(authInfo, r)
+	code, err := c.iac.ValidateCallback(authInfo, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -162,7 +162,7 @@ func (s *client) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// We now fetch the profile of the user so we know more about the user.
 	// Depending on the authentication server, this information might be more
 	// or less complete. However, ".Me" must always be present.
-	profile, err := s.iac.FetchProfile(r.Context(), authInfo, code)
+	profile, err := c.iac.FetchProfile(r.Context(), authInfo, code)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -186,7 +186,7 @@ func (s *client) callbackHandler(w http.ResponseWriter, r *http.Request) {
 // required to then validate the request once the callback is received. Note that
 // this is just an example. You could use other methods, such as encoding with JWT
 // tokens, a database, you name it.
-func (s *client) storeAuthInfo(w http.ResponseWriter, r *http.Request, i *indieauth.AuthInfo) error {
+func (c *client) storeAuthInfo(w http.ResponseWriter, r *http.Request, i *indieauth.AuthInfo) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return err
@@ -206,7 +206,7 @@ func (s *client) storeAuthInfo(w http.ResponseWriter, r *http.Request, i *indiea
 }
 
 // getAuthInfo gets the [indieauth.AuthInfo] stored into a cookie.
-func (s *client) getAuthInfo(w http.ResponseWriter, r *http.Request) (*indieauth.AuthInfo, error) {
+func (c *client) getAuthInfo(w http.ResponseWriter, r *http.Request) (*indieauth.AuthInfo, error) {
 	cookie, err := r.Cookie(oauthCookieName)
 	if err != nil {
 		return nil, err

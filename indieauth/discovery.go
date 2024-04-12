@@ -3,6 +3,7 @@ package indieauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+	"willnorris.com/go/microformats"
 	"willnorris.com/go/webmention/third_party/header"
 )
 
@@ -109,13 +111,13 @@ type endpointRequest struct {
 	err   error
 }
 
-func (s *Client) discoverEndpoints(ctx context.Context, urlStr string, rels ...string) ([]*endpointRequest, error) {
-	headEndpoints, found, errHead := s.discoverRequest(ctx, http.MethodHead, urlStr, rels...)
+func (c *Client) discoverEndpoints(ctx context.Context, urlStr string, rels ...string) ([]*endpointRequest, error) {
+	headEndpoints, found, errHead := c.discoverRequest(ctx, http.MethodHead, urlStr, rels...)
 	if errHead == nil && headEndpoints != nil && found {
 		return headEndpoints, nil
 	}
 
-	getEndpoints, found, errGet := s.discoverRequest(ctx, http.MethodGet, urlStr, rels...)
+	getEndpoints, found, errGet := c.discoverRequest(ctx, http.MethodGet, urlStr, rels...)
 	if errGet == nil && getEndpoints != nil && found {
 		return getEndpoints, nil
 	}
@@ -292,4 +294,117 @@ func resolveReferences(base string, refs ...*endpointRequest) error {
 		}
 	}
 	return nil
+}
+
+type ApplicationMetadata struct {
+	Name    string
+	Logo    string
+	URL     string
+	Summary string
+	Author  string
+}
+
+// ErrNoApplicationMetadata is returned when no `h-app` or `h-x-app` Microformat
+// has been found at a given URL.
+var ErrNoApplicationMetadata error = errors.New("application metadata (h-app, h-x-app) not found")
+
+// DiscoverApplicationMetadata fetches metadata for the application at the
+// provided URL. This metadata is given by the `h-app` or `h-x-app` [Microformat].
+// This information can be used by the server, for example, to display relevant
+// information about the application in the authorization page. If no information
+// has been found, an [ErrNoApplicationMetadata] error will be returned.
+//
+// Please note that this function only parses the first `h-app` or `h-x-app`
+// Microformat with information that it encounters.
+//
+// [Microformat]: https://microformats.org/wiki/h-app
+func (s *Server) DiscoverApplicationMetadata(ctx context.Context, clientID string) (*ApplicationMetadata, error) {
+	err := IsValidClientIdentifier(clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, clientID, nil)
+	if err != nil {
+		return nil, err
+	}
+	r.Header.Add("Accept", "text/html")
+
+	res, err := s.Client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)
+	}
+
+	contentType := res.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		return nil, fmt.Errorf("content-type: expected to include text/html, got '%q'", contentType)
+	}
+
+	data := microformats.Parse(res.Body, res.Request.URL)
+	if data == nil {
+		return nil, ErrNoApplicationMetadata
+	}
+
+	for _, item := range data.Items {
+		isApp := false
+		for _, typ := range item.Type {
+			// h-x-app for legacy support
+			if typ == "h-app" || typ == "h-x-app" {
+				isApp = true
+				break
+			}
+		}
+		if !isApp {
+			continue
+		}
+
+		name := getFirstStringProperty(item, "name")
+		url := getFirstStringProperty(item, "url")
+		logo := getFirstStringProperty(item, "logo")
+		if logo == "" {
+			logo = getFirstStringProperty(item, "photo")
+		}
+		summary := getFirstStringProperty(item, "summary")
+		author := getFirstStringProperty(item, "author")
+
+		if name == "" && url == "" && logo == "" && summary == "" && author == "" {
+			continue
+		}
+
+		return &ApplicationMetadata{
+			Name:    name,
+			URL:     url,
+			Logo:    logo,
+			Summary: summary,
+			Author:  author,
+		}, nil
+	}
+
+	return nil, ErrNoApplicationMetadata
+}
+
+func getFirstStringProperty(item *microformats.Microformat, key string) string {
+	vv, ok := item.Properties[key]
+	if !ok {
+		return ""
+	}
+
+	for _, v := range vv {
+		if s, ok := v.(string); ok && s != "" {
+			return s
+		}
+
+		if m, ok := v.(map[string]string); ok {
+			if mv, ok := m["value"]; ok && mv != "" {
+				return mv
+			}
+		}
+	}
+
+	return ""
 }
