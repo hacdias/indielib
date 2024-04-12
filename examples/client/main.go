@@ -125,7 +125,7 @@ func (s *client) loginHandler(w http.ResponseWriter, r *http.Request) {
 	// Generates the redirect request to the target profile so that the user can
 	// authorize the request. We also ask for the "profile" and "email" scope so
 	// that we can get more information about the user.
-	authInfo, redirect, err := s.iac.Authenticate(profileURL, "profile email")
+	authInfo, redirect, err := s.iac.Authenticate(r.Context(), profileURL, "profile email")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -162,7 +162,7 @@ func (s *client) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	// We now fetch the profile of the user so we know more about the user.
 	// Depending on the authentication server, this information might be more
 	// or less complete. However, ".Me" must always be present.
-	profile, err := s.iac.FetchProfile(authInfo, code)
+	profile, err := s.iac.FetchProfile(r.Context(), authInfo, code)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

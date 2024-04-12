@@ -91,8 +91,8 @@ type Metadata struct {
 //
 // The returned [AuthInfo] should be stored by the caller of this function in
 // such a way that it can be retrieved to validate the callback.
-func (c *Client) Authenticate(profile, scope string) (*AuthInfo, string, error) {
-	metadata, err := c.DiscoverMetadata(profile)
+func (c *Client) Authenticate(ctx context.Context, profile, scope string) (*AuthInfo, string, error) {
+	metadata, err := c.DiscoverMetadata(ctx, profile)
 	if err != nil {
 		return nil, "", err
 	}
@@ -222,7 +222,7 @@ func ProfileFromToken(token *oauth2.Token) *Profile {
 //
 // You can now use httpClient to make requests to, for example, a Micropub endpoint. They
 // are authenticated with token. See https://pkg.go.dev/golang.org/x/oauth2 for more details.
-func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Config, error) {
+func (c *Client) GetToken(ctx context.Context, i *AuthInfo, code string) (*oauth2.Token, *oauth2.Config, error) {
 	if i.TokenEndpoint == "" {
 		return nil, nil, ErrNoEndpointFound
 	}
@@ -230,7 +230,7 @@ func (c *Client) GetToken(i *AuthInfo, code string) (*oauth2.Token, *oauth2.Conf
 	o := c.GetOAuth2(&i.Metadata)
 
 	tok, err := o.Exchange(
-		context.WithValue(context.Background(), oauth2.HTTPClient, c.Client),
+		context.WithValue(ctx, oauth2.HTTPClient, c.Client),
 		code,
 		oauth2.SetAuthURLParam("client_id", c.ClientID),
 		oauth2.SetAuthURLParam("code_verifier", i.CodeVerifier),
@@ -259,7 +259,7 @@ func (c *Client) GetOAuth2(m *Metadata) *oauth2.Config {
 // this action consumes the code.
 //
 // [specification]: https://indieauth.spec.indieweb.org/#profile-url-response
-func (c *Client) FetchProfile(i *AuthInfo, code string) (*Profile, error) {
+func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*Profile, error) {
 	v := url.Values{
 		"grant_type":    {"authorization_code"},
 		"code":          {code},
@@ -268,7 +268,7 @@ func (c *Client) FetchProfile(i *AuthInfo, code string) (*Profile, error) {
 		"code_verifier": {i.CodeVerifier},
 	}
 
-	r, err := http.NewRequest("POST", i.AuthorizationEndpoint, strings.NewReader(v.Encode()))
+	r, err := http.NewRequestWithContext(ctx, "POST", i.AuthorizationEndpoint, strings.NewReader(v.Encode()))
 	if err != nil {
 		return nil, err
 	}

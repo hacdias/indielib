@@ -1,6 +1,7 @@
 package indieauth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,15 +29,15 @@ var ErrNoEndpointFound = fmt.Errorf("no endpoint found")
 // [webmention.DiscoverEndpoint].
 //
 // [webmention.DiscoverEndpoint]: https://github.com/willnorris/webmention/blob/main/webmention.go
-func (c *Client) DiscoverMetadata(urlStr string) (*Metadata, error) {
-	metadata, err := c.discoverMetadata(urlStr)
+func (c *Client) DiscoverMetadata(ctx context.Context, urlStr string) (*Metadata, error) {
+	metadata, err := c.discoverMetadata(ctx, urlStr)
 	if err == nil {
 		return metadata, nil
 	}
 
 	// This part is kept as means of backwards compatibility with IndieAuth revision from
 	// 26 November 2020: https://indieauth.spec.indieweb.org/20201126/#discovery-by-clients
-	urls, err := c.discoverEndpoints(urlStr, AuthorizationEndpointRel, TokenEndpointRel)
+	urls, err := c.discoverEndpoints(ctx, urlStr, AuthorizationEndpointRel, TokenEndpointRel)
 	if err != nil {
 		return nil, err
 	}
@@ -57,13 +58,13 @@ func (c *Client) DiscoverMetadata(urlStr string) (*Metadata, error) {
 
 // discoverMetadata fetches the server's metadata information as described in the
 // specification: https://indieauth.spec.indieweb.org/#discovery-by-clients
-func (c *Client) discoverMetadata(urlStr string) (*Metadata, error) {
-	metadataUrl, err := c.DiscoverLinkEndpoint(urlStr, IndieAuthMetadataRel)
+func (c *Client) discoverMetadata(ctx context.Context, urlStr string) (*Metadata, error) {
+	metadataUrl, err := c.DiscoverLinkEndpoint(ctx, urlStr, IndieAuthMetadataRel)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, metadataUrl, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +95,8 @@ func (c *Client) discoverMetadata(urlStr string) (*Metadata, error) {
 }
 
 // DiscoverLinkEndpoint discovers as given endpoint identified by rel.
-func (c *Client) DiscoverLinkEndpoint(urlStr, rel string) (string, error) {
-	urls, err := c.discoverEndpoints(urlStr, rel)
+func (c *Client) DiscoverLinkEndpoint(ctx context.Context, urlStr, rel string) (string, error) {
+	urls, err := c.discoverEndpoints(ctx, urlStr, rel)
 	if err != nil {
 		return "", err
 	}
@@ -108,13 +109,13 @@ type endpointRequest struct {
 	err   error
 }
 
-func (s *Client) discoverEndpoints(urlStr string, rels ...string) ([]*endpointRequest, error) {
-	headEndpoints, found, errHead := s.discoverRequest(http.MethodHead, urlStr, rels...)
+func (s *Client) discoverEndpoints(ctx context.Context, urlStr string, rels ...string) ([]*endpointRequest, error) {
+	headEndpoints, found, errHead := s.discoverRequest(ctx, http.MethodHead, urlStr, rels...)
 	if errHead == nil && headEndpoints != nil && found {
 		return headEndpoints, nil
 	}
 
-	getEndpoints, found, errGet := s.discoverRequest(http.MethodGet, urlStr, rels...)
+	getEndpoints, found, errGet := s.discoverRequest(ctx, http.MethodGet, urlStr, rels...)
 	if errGet == nil && getEndpoints != nil && found {
 		return getEndpoints, nil
 	}
@@ -136,8 +137,8 @@ func (s *Client) discoverEndpoints(urlStr string, rels ...string) ([]*endpointRe
 	return endpoints, nil
 }
 
-func (c *Client) discoverRequest(method, urlStr string, rels ...string) ([]*endpointRequest, bool, error) {
-	req, err := http.NewRequest(method, urlStr, nil)
+func (c *Client) discoverRequest(ctx context.Context, method, urlStr string, rels ...string) ([]*endpointRequest, bool, error) {
+	req, err := http.NewRequestWithContext(ctx, method, urlStr, nil)
 	if err != nil {
 		return nil, false, err
 	}
