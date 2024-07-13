@@ -1,4 +1,4 @@
-name: Test
+name: Test and Coverage
 on:
   push:
     tags:
