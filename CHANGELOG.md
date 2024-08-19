@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.4.0]
+
+### Changed
+
+- Upgraded dependencies to latest versions.
+- Upgrades build to use Go 1.23.
+
 ## [0.3.1]
 
 ### Changed
