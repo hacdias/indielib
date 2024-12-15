@@ -4,8 +4,8 @@ go 1.23
 
 require (
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/net v0.28.0
-	golang.org/x/oauth2 v0.22.0
+	golang.org/x/net v0.32.0
+	golang.org/x/oauth2 v0.24.0
 	willnorris.com/go/microformats v1.2.1-0.20240301064101-b5d1b9d2120e
 	willnorris.com/go/webmention v0.0.0-20220108183051-4a23794272f0
 )
