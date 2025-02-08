@@ -3,6 +3,7 @@ package micropub
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -47,12 +48,7 @@ type Request struct {
 func ParseRequest(r *http.Request) (*Request, error) {
 	contentType := r.Header.Get("Content-type")
 	if strings.Contains(contentType, "application/json") {
-		req := requestJSON{}
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			return nil, err
-		}
-		return parseJSON(req)
+		return parseJSON(r.Body)
 	}
 
 	err := r.ParseForm()
@@ -127,7 +123,18 @@ type requestJSON struct {
 	Delete     interface{}      `json:"delete,omitempty"`
 }
 
-func parseJSON(body requestJSON) (*Request, error) {
+func parseJSON(r io.Reader) (*Request, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	body := requestJSON{}
+	err = json.Unmarshal(data, &body)
+	if err != nil {
+		return nil, err
+	}
+
 	req := &Request{}
 
 	if body.Type != nil {
@@ -163,6 +170,21 @@ func parseJSON(body requestJSON) (*Request, error) {
 			req.Updates.Add = body.Add
 			req.Updates.Replace = body.Replace
 			req.Updates.Delete = body.Delete
+
+			// Best effort to get all commands by unmarshaling one more time
+			other := map[string]any{}
+			err = json.Unmarshal(data, &other)
+			if err != nil {
+				return nil, err
+			}
+			req.Commands = map[string][]interface{}{}
+			for key, value := range other {
+				if strings.HasPrefix(key, "mp-") {
+					if arr, ok := value.([]any); ok {
+						req.Commands[strings.TrimPrefix(key, "mp-")] = arr
+					}
+				}
+			}
 		}
 
 		return req, nil

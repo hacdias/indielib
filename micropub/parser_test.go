@@ -127,8 +127,9 @@ var (
 			`{"action":"update","url":"https://example.com/test","delete":["category"]}`,
 			"application/json",
 			&Request{
-				Action: ActionUpdate,
-				URL:    "https://example.com/test",
+				Action:   ActionUpdate,
+				URL:      "https://example.com/test",
+				Commands: map[string][]any{},
 				Updates: RequestUpdate{
 					Delete: []any{"category"},
 				},
@@ -138,8 +139,26 @@ var (
 			`{"action": "update","url":"https://example.com/test","delete":{"category": ["indieweb"]}}`,
 			"application/json",
 			&Request{
+				Action:   ActionUpdate,
+				URL:      "https://example.com/test",
+				Commands: map[string][]any{},
+				Updates: RequestUpdate{
+					Delete: map[string]any{
+						"category": []any{"indieweb"},
+					},
+				},
+			},
+		},
+		{
+			`{"action": "update","url":"https://example.com/test","delete":{"category": ["indieweb"]},"mp-command":["blah"],"mp-slug":["slug"]}`,
+			"application/json",
+			&Request{
 				Action: ActionUpdate,
 				URL:    "https://example.com/test",
+				Commands: map[string][]any{
+					"command": {"blah"},
+					"slug":    {"slug"},
+				},
 				Updates: RequestUpdate{
 					Delete: map[string]any{
 						"category": []any{"indieweb"},
