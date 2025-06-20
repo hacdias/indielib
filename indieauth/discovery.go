@@ -76,7 +76,9 @@ func (c *Client) discoverMetadata(ctx context.Context, urlStr string) (*Metadata
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -149,7 +151,9 @@ func (c *Client) discoverRequest(ctx context.Context, method, urlStr string, rel
 	if err != nil {
 		return nil, false, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if code := resp.StatusCode; code < 200 || 300 <= code {
 		return nil, false, fmt.Errorf("response error: %v", resp.StatusCode)
@@ -334,7 +338,9 @@ func (s *Server) DiscoverApplicationMetadata(ctx context.Context, clientID strin
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)

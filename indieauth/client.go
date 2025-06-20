@@ -280,7 +280,9 @@ func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*P
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {

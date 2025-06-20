@@ -80,7 +80,9 @@ func NewMediaHandler(mediaUploader MediaUploader, scopeChecker ScopeChecker, opt
 			serveError(w, errors.Join(ErrBadRequest, err))
 			return
 		}
-		defer file.Close()
+		defer func() {
+			_ = file.Close()
+		}()
 
 		redirect, err := mediaUploader(file, header)
 		if err != nil {

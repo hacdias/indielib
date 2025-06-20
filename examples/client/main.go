@@ -96,7 +96,7 @@ type client struct {
 // indexHandler serves a simple index page with a login form.
 func (c *client) indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(indexTemplate))
+	_, _ = w.Write([]byte(indexTemplate))
 }
 
 // loginHandler handles the login process after submitting the domain via the
