@@ -1,18 +1,20 @@
 module go.hacdias.com/indielib
 
-go 1.23
+go 1.23.0
+
+toolchain go1.24.4
 
 require (
-	github.com/stretchr/testify v1.8.4
-	golang.org/x/net v0.34.0
-	golang.org/x/oauth2 v0.26.0
-	willnorris.com/go/microformats v1.2.1-0.20240301064101-b5d1b9d2120e
-	willnorris.com/go/webmention v0.0.0-20220108183051-4a23794272f0
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/net v0.41.0
+	golang.org/x/oauth2 v0.30.0
+	willnorris.com/go/microformats v1.2.1-0.20250531040321-0a7043b9acea
+	willnorris.com/go/webmention v0.0.0-20250531043116-33a44c5fb605
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
