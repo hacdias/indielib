@@ -17,8 +17,8 @@
     </p>
 
     <ul>
-      <li><strong>Redirect:</strong> <code>{{ .Request.ClientID }}</code></li>
-      <li><strong>Client:</strong> <code>{{ .Request.RedirectURI }}</code></li>
+      <li><strong>Redirect:</strong> <code>{{ .Request.RedirectURI }}</code></li>
+      <li><strong>Client:</strong> <code>{{ .Request.ClientID }}</code></li>
     </ul>
 
     <p>For the following scopes:{{ range .Request.Scopes}} <code>{{ . }}</code>{{ end }}.</p>
