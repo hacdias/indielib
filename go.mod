@@ -2,12 +2,12 @@ module go.hacdias.com/indielib
 
 go 1.24.0
 
-toolchain go1.25.1
+toolchain go1.25.2
 
 require (
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/net v0.44.0
-	golang.org/x/oauth2 v0.31.0
+	golang.org/x/net v0.46.0
+	golang.org/x/oauth2 v0.32.0
 	willnorris.com/go/microformats v1.2.1-0.20250531040321-0a7043b9acea
 	willnorris.com/go/webmention v0.0.0-20250531043116-33a44c5fb605
 )
