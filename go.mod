@@ -7,7 +7,7 @@ toolchain go1.25.4
 require (
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.46.0
-	golang.org/x/oauth2 v0.32.0
+	golang.org/x/oauth2 v0.33.0
 	willnorris.com/go/microformats v1.2.1-0.20250531040321-0a7043b9acea
 	willnorris.com/go/webmention v0.0.0-20250531043116-33a44c5fb605
 )
