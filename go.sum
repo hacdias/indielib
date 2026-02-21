@@ -16,7 +16,7 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-willnorris.com/go/microformats v1.2.1-0.20250531040321-0a7043b9acea h1:/VOxVNDxU7euLeirlUmK5AnwaPEc/FctOsGIuOVFtwE=
-willnorris.com/go/microformats v1.2.1-0.20250531040321-0a7043b9acea/go.mod h1:23xy5rD4EnQZdew0agfgI9+YcrCXaK5jb3WVyil/2+Y=
+willnorris.com/go/microformats v1.2.1-0.20260218044424-22f0c2eff25b h1:n8RVQUhmZGjwbu0/dI7kacH0crPz8HFO3RXwdxaLcto=
+willnorris.com/go/microformats v1.2.1-0.20260218044424-22f0c2eff25b/go.mod h1:23xy5rD4EnQZdew0agfgI9+YcrCXaK5jb3WVyil/2+Y=
 willnorris.com/go/webmention v0.0.0-20250531043116-33a44c5fb605 h1:emBiWPMoSWXbAwOBbDd/2RSKdIyAw38S4UlFB91OzoY=
 willnorris.com/go/webmention v0.0.0-20250531043116-33a44c5fb605/go.mod h1:HizkYGdDsLSSolZorYKuV/l7Y2BXEfiOSjShTrCMNsM=
