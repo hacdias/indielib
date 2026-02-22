@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.5.0]
+
+### Added
+
+- Micropub: added `WithGetPostStatuses`, which allows you to configure the [Post Statuses](https://indieweb.org/Micropub-extensions#Post_Status).
+
+### Changed
+
+- Upgraded dependencies to latest versions.
+- Upgrades build to use minimum Go 1.24.
+
 ## [0.4.4]
 
 ### Changed
