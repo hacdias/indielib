@@ -17,12 +17,13 @@ var (
 // Configuration is the configuration of a [Router]. Use the different [Option]
 // to customize your endpoint.
 type Configuration struct {
-	MediaEndpoint  string
-	GetSyndicateTo func() []Syndication
-	GetChannels    func() []Channel
-	GetCategories  func() []string
-	GetPostTypes   func() []PostType
-	GetVisibility  func() []string
+	MediaEndpoint   string
+	GetSyndicateTo  func() []Syndication
+	GetChannels     func() []Channel
+	GetCategories   func() []string
+	GetPostStatuses func() []string
+	GetPostTypes    func() []PostType
+	GetVisibility   func() []string
 }
 
 // PostType is used to provide information regarding the server's [supported vocabulary].
@@ -99,6 +100,16 @@ func WithGetPostTypes(getPostTypes func() []PostType) Option {
 func WithGetVisibility(getVisibility func() []string) Option {
 	return func(conf *Configuration) {
 		conf.GetVisibility = getVisibility
+	}
+}
+
+// WithGetPostStatuses configures the getter for supported [post-status]. Return an
+// empty slice if only published post statuses are supported.
+//
+// [post-status]: https://indieweb.org/Micropub-extensions#Post_Status
+func WithGetPostStatuses(getPostStatuses func() []string) Option {
+	return func(conf *Configuration) {
+		conf.GetPostStatuses = getPostStatuses
 	}
 }
 
@@ -207,6 +218,9 @@ func (h *handler) micropubGet(w http.ResponseWriter, r *http.Request) {
 		}
 		if categories := h.conf.GetCategories(); len(categories) != 0 {
 			config["categories"] = categories
+		}
+		if postStatuses := h.conf.GetPostStatuses(); len(postStatuses) != 0 {
+			config["post-status"] = postStatuses
 		}
 		if postTypes := h.conf.GetPostTypes(); len(postTypes) != 0 {
 			config["post-types"] = postTypes
