@@ -18,6 +18,6 @@ jobs:
       - name: Run test with coverage
         run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
