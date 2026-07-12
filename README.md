@@ -1,6 +1,5 @@
 # indielib
 
-[![Go Report Card](https://goreportcard.com/badge/go.hacdias.com/indielib?style=flat-square)](https://goreportcard.com/report/go.hacdias.com/indielib)
 [![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://pkg.go.dev/go.hacdias.com/indielib)
 [![Codecov](https://img.shields.io/codecov/c/github/hacdias/indielib?token=SSETVGG0UH&style=flat-square)](https://app.codecov.io/gh/hacdias/indielib)
 
