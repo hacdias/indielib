@@ -9,12 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- IndieAuth: `Server.ParseAuthorization` now accepts a `redirect_uri` on a different host than the `client_id` if the client publishes it, via `redirect_uris` in the [client metadata](https://indieauth.spec.indieweb.org/#client-metadata) or via `redirect_uri` [link relations](https://indieauth.spec.indieweb.org/#redirect-url).
-
 ### Changed
-
-- Upgraded dependencies to latest versions.
-- Upgrades build to use minimum Go 1.27.
 
 ### Deprecated
 
@@ -23,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## [0.6.0]
+
+### Added
+
+- IndieAuth: `Server.ParseAuthorization` now accepts a `redirect_uri` on a different host than the `client_id` if the client publishes it, via `redirect_uris` in the [client metadata](https://indieauth.spec.indieweb.org/#client-metadata) or via `redirect_uri` [link relations](https://indieauth.spec.indieweb.org/#redirect-url).
+
+### Changed
+
+- Upgraded dependencies to latest versions.
+- Upgrades build to use minimum Go 1.27.
 
 ## [0.5.0]
 
