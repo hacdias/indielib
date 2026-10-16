@@ -103,6 +103,63 @@ func TestParseAuthorization(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("Redirect URI Discovery", func(t *testing.T) {
+		t.Parallel()
+
+		mux := http.NewServeMux()
+		mux.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"redirect_uris": ["https://other.example/callback"]}`))
+		})
+		mux.HandleFunc("/html/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			w.Header().Set("Link", `<https://header.example/callback>; rel="redirect_uri"`)
+			_, _ = w.Write([]byte(`<html><head>
+				<link rel="redirect_uri" href="https://other.example/callback">
+				<link rel="redirect_uri" href="https://another.example/callback">
+			</head></html>`))
+		})
+		mux.HandleFunc("/html-empty/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<html></html>`))
+		})
+		ts := httptest.NewServer(mux)
+		defer ts.Close()
+
+		for _, testCase := range []struct {
+			clientID      string
+			redirectURI   string
+			expectedError error
+		}{
+			{ts.URL + "/app/", "https://other.example/callback", nil},
+			{ts.URL + "/app/", "https://other.example/nope", ErrInvalidRedirectURI},
+			{ts.URL + "/html/", "https://other.example/callback", nil},
+			{ts.URL + "/html/", "https://another.example/callback", nil},
+			{ts.URL + "/html/", "https://header.example/callback", nil},
+			{ts.URL + "/html/", "https://other.example/nope", ErrInvalidRedirectURI},
+			{ts.URL + "/html-empty/", "https://other.example/callback", ErrInvalidRedirectURI},
+			{ts.URL + "/missing/", "https://other.example/callback", ErrInvalidRedirectURI},
+		} {
+			ias := NewServer(false, ts.Client())
+
+			r := httptest.NewRequest(http.MethodPost, "/", nil)
+			r.Form = url.Values{}
+			r.Form.Set("response_type", "code")
+			r.Form.Set("client_id", testCase.clientID)
+			r.Form.Set("redirect_uri", testCase.redirectURI)
+
+			authReq, err := ias.ParseAuthorization(r)
+
+			if testCase.expectedError == nil {
+				assert.NoError(t, err)
+				assert.Equal(t, authReq.RedirectURI, testCase.redirectURI)
+			} else {
+				assert.Nil(t, authReq)
+				assert.ErrorIs(t, err, testCase.expectedError)
+			}
+		}
+	})
 }
 
 func TestValidateTokenExchange(t *testing.T) {

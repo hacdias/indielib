@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -20,6 +21,7 @@ const (
 	AuthorizationEndpointRel string = "authorization_endpoint"
 	TokenEndpointRel         string = "token_endpoint"
 	IndieAuthMetadataRel     string = "indieauth-metadata"
+	RedirectURIRel           string = "redirect_uri"
 )
 
 // ErrNoEndpointFound is returned when no endpoint can be found for a certain
@@ -278,6 +280,55 @@ func htmlLink(r io.Reader, rels ...string) ([]*endpointRequest, bool, error) {
 	}
 
 	return links, matched == len(rels), nil
+}
+
+// extractAllLinks returns the URLs of all HTTP Link headers and HTML <link>
+// elements with the given rel, resolved against the response URL.
+func extractAllLinks(resp *http.Response, rel string) ([]string, error) {
+	var links []string
+
+	for _, h := range header.ParseList(resp.Header, "Link") {
+		link := header.ParseLink(h)
+		if slices.Contains(link.Rel, rel) {
+			links = append(links, link.Href)
+		}
+	}
+
+	doc, err := html.Parse(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	for n := range doc.Descendants() {
+		if n.Type != html.ElementNode || n.DataAtom != atom.Link {
+			continue
+		}
+
+		var href, rels string
+		for _, a := range n.Attr {
+			switch a.Key {
+			case atom.Href.String():
+				href = a.Val
+			case atom.Rel.String():
+				rels = a.Val
+			}
+		}
+
+		if href != "" && slices.Contains(strings.Fields(rels), rel) {
+			links = append(links, href)
+		}
+	}
+
+	base := resp.Request.URL
+	for i, link := range links {
+		u, err := url.Parse(link)
+		if err != nil {
+			return nil, err
+		}
+		links[i] = base.ResolveReference(u).String()
+	}
+
+	return links, nil
 }
 
 // resolveReferences resolves each URL in refs into an absolute URL relative to

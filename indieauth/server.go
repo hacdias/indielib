@@ -1,9 +1,13 @@
 package indieauth
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	urlpkg "net/url"
+	"slices"
 	"strings"
 )
 
@@ -73,7 +77,7 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 	}
 
 	redirectURI := r.FormValue("redirect_uri")
-	if err := s.validateRedirectURI(clientID, redirectURI); err != nil {
+	if err := s.validateRedirectURI(r.Context(), clientID, redirectURI); err != nil {
 		return nil, err
 	}
 
@@ -115,7 +119,7 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 	return req, nil
 }
 
-func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
+func (s *Server) validateRedirectURI(ctx context.Context, clientID, redirectURI string) error {
 	client, err := urlpkg.Parse(clientID)
 	if err != nil {
 		return errors.Join(ErrInvalidRedirectURI, err)
@@ -130,9 +134,59 @@ func (s *Server) validateRedirectURI(clientID, redirectURI string) error {
 		return nil
 	}
 
-	// TODO: redirect URI may have a different host. In this case, we do
-	// discovery: https://indieauth.spec.indieweb.org/#redirect-url
-	return errors.Join(ErrInvalidRedirectURI, errors.New("redirect uri has different host from client id"))
+	if redirect.Host == "" {
+		return errors.Join(ErrInvalidRedirectURI, errors.New("redirect uri has no host"))
+	}
+
+	// Redirect URI has a different host, make sure it's published by the client.
+	uris, err := s.discoverRedirectURIs(ctx, clientID)
+	if err != nil {
+		return errors.Join(ErrInvalidRedirectURI, err)
+	}
+
+	if slices.Contains(uris, redirectURI) {
+		return nil
+	}
+
+	return errors.Join(ErrInvalidRedirectURI, errors.New("redirect uri not published by client"))
+}
+
+// discoverRedirectURIs fetches the redirect URIs either published in the client
+// metadata, or in the <link> relations if the response is HTML.
+// - https://indieauth.spec.indieweb.org/#client-metadata
+// - https://indieauth.spec.indieweb.org/#redirect-url
+func (s *Server) discoverRedirectURIs(ctx context.Context, clientID string) ([]string, error) {
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, clientID, nil)
+	if err != nil {
+		return nil, err
+	}
+	r.Header.Add("Accept", "application/json, text/html")
+
+	res, err := s.Client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)
+	}
+
+	if strings.Contains(res.Header.Get("Content-Type"), "text/html") {
+		return extractAllLinks(res, RedirectURIRel)
+	}
+
+	var metadata struct {
+		RedirectURIs []string `json:"redirect_uris"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&metadata); err != nil {
+		return nil, err
+	}
+
+	return metadata.RedirectURIs, nil
 }
 
 // ValidateTokenExchange validates the token exchange request according to the
