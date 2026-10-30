@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -165,12 +164,6 @@ func (c *client) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	profile, err := c.iac.FetchProfile(r.Context(), authInfo, code)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Validate the ".Me" - please note that loopback (localhost) is invalid.
-	if err := indieauth.IsValidProfileURL(profile.Me); err != nil {
-		http.Error(w, fmt.Sprintf("invalid 'me': %s", err), http.StatusBadRequest)
 		return
 	}
 
