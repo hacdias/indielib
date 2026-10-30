@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Micropub: `?q=config` no longer panics when `WithGetPostStatuses` is not set.
 - Micropub: `ParseRequest` no longer removes `h` and `access_token` from `r.Form`, so `HasScope` can read a token sent in the form body.
+- Micropub: `WithMaxMemory` now sets the memory limit instead of overriding the maximum media size.
 
 ### Security
 

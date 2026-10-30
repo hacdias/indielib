@@ -42,7 +42,7 @@ func WithMaxMediaSize(size int64) MediaOption {
 // that the upload is kept in temporary files.
 func WithMaxMemory(size int64) MediaOption {
 	return func(conf *MediaConfiguration) {
-		conf.MaxMediaSize = size
+		conf.MaxMemory = size
 	}
 }
 
