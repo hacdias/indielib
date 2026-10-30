@@ -7,7 +7,7 @@ This is a server demo using the [`indielib`](../../) package. In this demo, an H
 
 The example works best if not run in localhost. You can try Tailscale Funnel, ngrok, or other similar services to temporarily expose the service. This URL has to be passed via the `--client` flag.
 
-Note that this demo does not implement all functionalities from IndieAuth/OAuth2.
+Note that this demo does not implement all functionalities from IndieAuth/OAuth2. It also has no media endpoint, so posts that upload photos as files are not supported.
 
 You can try this demo with applications such as [Quill](https://quill.p3k.io/), or [Micropublish](https://micropublish.net/).
 

@@ -175,6 +175,10 @@ type handler struct {
 // [Implementation.HasScope]. If your posts, such as drafts, are not all public,
 // mount the handler behind your own authentication middleware.
 //
+// Multipart requests, which clients use to upload files when there is no media
+// endpoint, are not supported. Set one with [WithMediaEndpoint], for example
+// served by [NewMediaHandler], so that clients upload files there instead.
+//
 // [specification]: https://micropub.spec.indieweb.org/
 func NewHandler(impl Implementation, options ...Option) http.Handler {
 	conf := &Configuration{
