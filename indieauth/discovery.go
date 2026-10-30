@@ -267,7 +267,7 @@ func htmlLink(r io.Reader, rels ...string) ([]*endpointRequest, bool, error) {
 					}
 				}
 				if hrefFound && relFound {
-					for _, v := range strings.Split(rel, " ") {
+					for _, v := range strings.Fields(rel) {
 						if v == targetRel {
 							return &endpointRequest{value: href}
 						}
