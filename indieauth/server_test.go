@@ -204,6 +204,16 @@ func TestServerClientRejectsLoopback(t *testing.T) {
 	assert.ErrorIs(t, err, ErrLoopbackClientID)
 }
 
+func TestServerClientWithReplacedDefaultTransport(t *testing.T) {
+	// Mocking libraries, such as httpmock, replace http.DefaultTransport.
+	orig := http.DefaultTransport
+	http.DefaultTransport = &handlerRoundTripper{}
+	t.Cleanup(func() { http.DefaultTransport = orig })
+
+	_, err := NewServer(false, nil).Client.Get("http://127.0.0.1:1/")
+	assert.ErrorIs(t, err, ErrLoopbackClientID)
+}
+
 func TestValidateTokenExchange(t *testing.T) {
 	t.Parallel()
 
