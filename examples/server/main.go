@@ -6,6 +6,7 @@ import (
 	"flag"
 	"html/template"
 	"log"
+	"maps"
 	"net/http"
 	"strconv"
 	"sync"
@@ -85,17 +86,20 @@ var (
 )
 
 func (s *server) generalHandler(w http.ResponseWriter, r *http.Request) {
-	s.postsMu.RLock()
-	defer s.postsMu.RUnlock()
-
 	if r.URL.Path == "/" {
+		s.postsMu.RLock()
+		posts := maps.Clone(s.posts)
+		s.postsMu.RUnlock()
+
 		serveHTML(w, "index.html", map[string]any{
 			"Profile": s.profileURL,
-			"Posts":   s.posts,
+			"Posts":   posts,
 		})
 		return
 	}
 
+	s.postsMu.RLock()
+	defer s.postsMu.RUnlock()
 	if post, ok := s.posts[r.URL.Path]; ok {
 		serveHTML(w, "post.html", post)
 		return
