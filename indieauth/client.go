@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -280,7 +279,6 @@ func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*P
 		return nil, err
 	}
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	r.Header.Add("Content-Length", strconv.Itoa(len(v.Encode())))
 	r.Header.Add("Accept", "application/json")
 
 	res, err := c.Client.Do(r)
