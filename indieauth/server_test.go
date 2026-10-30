@@ -1,6 +1,7 @@
 package indieauth
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -156,6 +157,8 @@ func TestParseAuthorization(t *testing.T) {
 			{"https://example.com/missing/", "https://other.example/callback", ErrInvalidRedirectURI},
 			{"http://127.0.0.1:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
 			{"http://localhost:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
+			{"http://LOCALHOST:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
+			{"http://localhost.:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
 		} {
 			ias := NewServer(false, &http.Client{Transport: &handlerRoundTripper{handler: mux}})
 
@@ -176,6 +179,20 @@ func TestParseAuthorization(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestServerClientRejectsLoopback(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer ts.Close()
+
+	_, port, err := net.SplitHostPort(ts.Listener.Addr().String())
+	assert.NoError(t, err)
+
+	client := NewServer(false, nil).Client
+	for _, u := range []string{ts.URL, "http://LOCALHOST:" + port + "/"} {
+		_, err := client.Get(u)
+		assert.ErrorIs(t, err, ErrLoopbackClientID, u)
+	}
 }
 
 func TestValidateTokenExchange(t *testing.T) {
