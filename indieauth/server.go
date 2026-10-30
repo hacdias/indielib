@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var (
@@ -72,7 +73,10 @@ func newServerClient() *http.Client {
 		},
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, IdleConnTimeout: 90 * time.Second}
+	if t, ok := http.DefaultTransport.(*http.Transport); ok {
+		transport = t.Clone()
+	}
 	transport.DialContext = dialer.DialContext
 	return &http.Client{Timeout: defaultTimeout, Transport: transport}
 }
