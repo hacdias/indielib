@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/json"
+	"errors"
 	"flag"
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"text/template"
 	"time"
 
@@ -74,7 +74,8 @@ func main() {
 
 	// Create a new client.
 	client := &client{
-		iac: indieauth.NewClient(clientID, callbackURI, nil),
+		iac:       indieauth.NewClient(clientID, callbackURI, nil),
+		authInfos: map[string]*indieauth.AuthInfo{},
 	}
 
 	http.HandleFunc("/", client.indexHandler)
@@ -90,6 +91,11 @@ func main() {
 
 type client struct {
 	iac *indieauth.Client
+
+	// shortcut: pending logins live in memory and abandoned ones are never
+	// removed, use a store with expiry in production.
+	authInfosMu sync.Mutex
+	authInfos   map[string]*indieauth.AuthInfo
 }
 
 // indexHandler serves a simple index page with a login form.
@@ -130,13 +136,9 @@ func (c *client) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We store the authInfo in a cookie. This information will be later needed
+	// We store the authInfo on the server. This information will be later needed
 	// to validate the callback request from the authentication server.
-	err = c.storeAuthInfo(w, r, authInfo)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	c.storeAuthInfo(w, authInfo)
 
 	// Redirect to the authentication server so that the user can authorize it.
 	http.Redirect(w, r, redirect, http.StatusSeeOther)
@@ -175,52 +177,45 @@ func (c *client) callbackHandler(w http.ResponseWriter, r *http.Request) {
 	_ = loggedInTemplate.Execute(w, profile)
 }
 
-// storeAuthInfo stores [indieauth.AuthInfo] into a cookie. This information is
-// required to then validate the request once the callback is received. Note that
-// this is just an example. You could use other methods, such as encoding with JWT
-// tokens, a database, you name it.
-func (c *client) storeAuthInfo(w http.ResponseWriter, r *http.Request, i *indieauth.AuthInfo) error {
-	data, err := json.Marshal(i)
-	if err != nil {
-		return err
-	}
+// storeAuthInfo stores [indieauth.AuthInfo] on the server, keyed by its state,
+// and puts the state in a cookie. This information is required to then validate
+// the request once the callback is received. The callback checks trust it, so it
+// must not be stored where the user can change it, such as in a cookie.
+func (c *client) storeAuthInfo(w http.ResponseWriter, i *indieauth.AuthInfo) {
+	c.authInfosMu.Lock()
+	c.authInfos[i.State] = i
+	c.authInfosMu.Unlock()
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthCookieName,
-		Value:    base64.StdEncoding.EncodeToString(data),
+		Value:    i.State,
 		Expires:  time.Now().Add(time.Minute * 10),
-		Secure:   r.URL.Scheme == "https",
 		HttpOnly: true,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
 	})
-
-	return nil
 }
 
-// getAuthInfo gets the [indieauth.AuthInfo] stored into a cookie.
+// getAuthInfo gets the [indieauth.AuthInfo] for the state stored in the cookie.
 func (c *client) getAuthInfo(w http.ResponseWriter, r *http.Request) (*indieauth.AuthInfo, error) {
 	cookie, err := r.Cookie(oauthCookieName)
 	if err != nil {
 		return nil, err
 	}
 
-	value, err := base64.StdEncoding.DecodeString(cookie.Value)
-	if err != nil {
-		return nil, err
-	}
+	c.authInfosMu.Lock()
+	i, ok := c.authInfos[cookie.Value]
+	delete(c.authInfos, cookie.Value)
+	c.authInfosMu.Unlock()
 
-	var i *indieauth.AuthInfo
-	err = json.Unmarshal([]byte(value), &i)
-	if err != nil {
-		return nil, err
+	if !ok {
+		return nil, errors.New("unknown login, please try again")
 	}
 
 	// Delete cookie.
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthCookieName,
 		MaxAge:   -1,
-		Secure:   r.URL.Scheme == "https",
 		Path:     "/",
 		HttpOnly: true,
 	})

@@ -90,7 +90,9 @@ type Metadata struct {
 // URI and an error.
 //
 // The returned [AuthInfo] should be stored by the caller of this function in
-// such a way that it can be retrieved to validate the callback.
+// such a way that it can be retrieved to validate the callback. Store it where
+// the user cannot change it, such as on your server: [Client.ValidateCallback],
+// [Client.FetchProfile] and [Client.GetToken] trust its fields.
 func (c *Client) Authenticate(ctx context.Context, profile, scope string) (*AuthInfo, string, error) {
 	metadata, err := c.DiscoverMetadata(ctx, profile)
 	if err != nil {
