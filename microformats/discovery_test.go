@@ -47,6 +47,9 @@ func TestDiscoverType(t *testing.T) {
 			{`{"type":["h-entry"],"properties":{"name":["    Microformats are amazing"],"summary":["In which I extoll the virtues of using microformats."],"content":[{"value":"      Microformats are amazing and blah blah","html":"<p>Microformats are amazing</p>"}]}}`, TypeNote, ""},
 			{`{"type":["h-entry"],"properties":{"name":["    Microformats are amazing"],"summary":["Microformats are amazing"],"content":[{"value":"Article","html":"<p>Article</p>"}]}}`, TypeArticle, ""},
 			{`{"type":["h-entry"],"properties":{"name":["Microformats are amazing"],"summary":["Microformats are amazing"],"content":[{"value":"Article","html":"<p>Article</p>"}]}}`, TypeArticle, ""},
+			{`{"type":["h-entry"],"properties":{"name":["Microformats  are\namazing"],"content":[{"value":"Microformats are amazing and blah blah"}]}}`, TypeNote, ""},
+			{`{"type":["h-entry"],"properties":{"name":["Microformats are amazing"],"content":["Microformats are amazing and blah blah"]}}`, TypeNote, ""},
+			{`{"type":["h-entry"],"properties":{"name":["Microformats are amazing"],"content":["Article"]}}`, TypeArticle, ""},
 
 			{`{"type":["h-entry"],"properties":{}}`, TypeNote, ""},
 			{`{"type":["h-entry"]}`, TypeNote, ""},

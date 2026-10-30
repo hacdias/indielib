@@ -1,7 +1,6 @@
 package microformats
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -97,16 +96,11 @@ func DiscoverType(data map[string]any) (Type, string) {
 		return TypeNote, ""
 	}
 
-	// Get content (or summary), and collapse all sequences of internal whitespace
-	// to a single space (0x20) character each.
+	// Get content (or summary), trim it, and collapse all sequences of internal
+	// whitespace to a single space (0x20) character each.
 	content := getMf2ContentOrSummary(properties)
-	var re = regexp.MustCompile(`/\s+/`)
-	name = re.ReplaceAllString(name, " ")
-	content = re.ReplaceAllString(content, " ")
-
-	// Trim whitespace.
-	name = strings.TrimSpace(name)
-	content = strings.TrimSpace(content)
+	name = strings.Join(strings.Fields(name), " ")
+	content = strings.Join(strings.Fields(content), " ")
 
 	// If this processed "name" property value is NOT a prefix of the
 	// processed "content" property, then it is an article post.
@@ -167,6 +161,10 @@ func getMf2Properties(mf2 map[string]any) map[string][]any {
 func getMf2ContentOrSummary(properties map[string][]any) string {
 	if contentSlice, ok := properties["content"]; ok {
 		if len(contentSlice) != 0 {
+			if content, ok := contentSlice[0].(string); ok && content != "" {
+				return content
+			}
+
 			contentMap, ok := contentSlice[0].(map[string]any)
 			if ok {
 				if content, ok := contentMap["text"].(string); ok && content != "" {
