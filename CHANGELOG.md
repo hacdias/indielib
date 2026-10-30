@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - IndieAuth: the server no longer fetches loopback client identifiers (`localhost`, `127.0.0.1`, `[::1]`) during redirect URI discovery or `DiscoverApplicationMetadata`, as the [specification](https://indieauth.spec.indieweb.org/#client-information-discovery) requires. It returns `ErrLoopbackClientID` instead.
+- IndieAuth: `Server.ParseAuthorization` now requires the `redirect_uri` to also match the scheme of the `client_id` before skipping redirect URI discovery. Previously, `http://app.example/cb` was accepted for `https://app.example/`.
 - IndieAuth: `IsValidProfileURL` and `IsValidClientIdentifier` no longer accept IP addresses written with a port or as IPv6, such as `https://10.0.0.1:8080/` or `https://[2001:db8::1]/`.
 
 ## [0.6.0]
