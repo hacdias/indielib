@@ -316,6 +316,10 @@ func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*P
 //
 // [specification]: https://indieauth.spec.indieweb.org/#authorization-server-confirmation
 func (c *Client) verifyMe(ctx context.Context, i *AuthInfo, me string) error {
+	if err := IsValidProfileURL(me); err != nil {
+		return errors.Join(ErrInvalidMe, err)
+	}
+
 	if me == i.Me {
 		return nil
 	}
