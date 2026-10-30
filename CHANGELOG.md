@@ -11,13 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- IndieAuth: `NewClient` and `NewServer` now default to an HTTP client with a 10 second timeout instead of `http.DefaultClient`, which has none.
-- IndieAuth: the default clients of `NewClient` and `NewServer` no longer send requests through `http.DefaultTransport`, so mocks that replace it, such as httpmock or gock, don't intercept them. Pass `http.DefaultClient` to keep that.
-- IndieAuth: `Metadata.ServiceDocumentation` is now a `string`, matching the [specification](https://indieauth.spec.indieweb.org/#indieauth-server-metadata). Before, metadata that included it failed to decode and discovery fell back to the legacy link relations, or failed.
-
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [0.6.1]
+
+### Changed
+
+- IndieAuth: `NewClient` and `NewServer` now default to an HTTP client with a 10 second timeout instead of `http.DefaultClient`, which has none.
+- IndieAuth: the default clients of `NewClient` and `NewServer` no longer send requests through `http.DefaultTransport`, so mocks that replace it, such as httpmock or gock, don't intercept them. Pass `http.DefaultClient` to keep that.
+- IndieAuth: `Metadata.ServiceDocumentation` is now a `string`, matching the [specification](https://indieauth.spec.indieweb.org/#indieauth-server-metadata). Before, metadata that included it failed to decode and discovery fell back to the legacy link relations, or failed.
 
 ### Fixed
 
