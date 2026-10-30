@@ -104,6 +104,20 @@ func TestParseAuthorization(t *testing.T) {
 		}
 	})
 
+	t.Run("Scopes", func(t *testing.T) {
+		t.Parallel()
+
+		r := httptest.NewRequest(http.MethodPost, "/", nil)
+		r.Form = url.Values{}
+		r.Form.Set("client_id", "https://example.com/")
+		r.Form.Set("redirect_uri", "https://example.com/callback")
+		r.Form.Set("scope", " create  update ")
+
+		authReq, err := NewServer(false, nil).ParseAuthorization(r)
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"create", "update"}, authReq.Scopes)
+	})
+
 	t.Run("Redirect URI Discovery", func(t *testing.T) {
 		t.Parallel()
 
