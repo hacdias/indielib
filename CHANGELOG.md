@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Micropub: `?q=config` no longer panics when `WithGetPostStatuses` is not set.
+- Micropub: `ParseRequest` no longer removes `h` and `access_token` from `r.Form`, so `HasScope` can read a token sent in the form body.
 
 ### Security
 
