@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -206,6 +207,15 @@ func TestParseRequest(t *testing.T) {
 		require.Equal(t, map[string][]any{"content": {"hello"}}, req.Properties)
 		require.Equal(t, "abc", r.FormValue("access_token"))
 		require.Equal(t, "entry", r.FormValue("h"))
+	})
+
+	t.Run("JSON Body Too Large", func(t *testing.T) {
+		body := `{"type":["h-entry"]}` + strings.Repeat(" ", maxJSONSize)
+		r := httptest.NewRequest(http.MethodPost, "/micropub", strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		req, err := ParseRequest(r)
+		require.ErrorIs(t, err, ErrTooLarge)
+		require.Nil(t, req)
 	})
 
 	t.Run("Invalid Requests", func(t *testing.T) {
