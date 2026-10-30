@@ -76,7 +76,7 @@ func TestMediaHandler(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, "/", body)
 		r.Header.Set("Content-Type", mp.FormDataContentType())
 
-		handler := NewMediaHandler(uploader, scopeChecker, WithMaxMediaSize(512))
+		handler := NewMediaHandler(uploader, scopeChecker, WithMaxMediaSize(512), WithMaxMemory(1<<20))
 		handler.ServeHTTP(w, r)
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 
