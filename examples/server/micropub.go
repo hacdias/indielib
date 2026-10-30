@@ -52,7 +52,10 @@ func (s *micropubImplementation) SourceMany(limit, offset int) ([]map[string]any
 }
 
 func (s *micropubImplementation) Create(req *micropub.Request) (string, error) {
-	newPath := "/" + time.Now().Format(time.RFC3339)
+	newPath := "/" + time.Now().Format(time.RFC3339Nano)
+
+	s.postsMu.Lock()
+	defer s.postsMu.Unlock()
 
 	s.posts[newPath] = post{
 		Type:       req.Type,
