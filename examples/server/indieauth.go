@@ -167,7 +167,7 @@ func (s *server) tokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Form.Get("grant_type") == "refresh_token" {
+	if r.FormValue("grant_type") == "refresh_token" {
 		// NOTE: this server does not implement refresh tokens.
 		// https://indieauth.spec.indieweb.org/#refresh-tokens
 		w.WriteHeader(http.StatusNotImplemented)
