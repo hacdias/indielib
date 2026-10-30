@@ -152,6 +152,20 @@ func TestRouterGet(t *testing.T) {
 		assert.EqualValues(t, `{"categories":["a","b"],"media-endpoint":"https://example.com/media","post-status":["published","draft"],"visibility":["public"]}`+"\n", string(body))
 	})
 
+	t.Run("?q=config (no options)", func(t *testing.T) {
+		impl := &mockRouterImplementation{}
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/micropub?q=config", nil)
+
+		handler := NewHandler(impl)
+		handler.ServeHTTP(w, r)
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		body, err := io.ReadAll(w.Result().Body)
+		assert.NoError(t, err)
+		assert.EqualValues(t, `{}`+"\n", string(body))
+	})
+
 	t.Run("?q=category, syndicate-to, channel", func(t *testing.T) {
 		for _, testCase := range []struct {
 			options        []Option
