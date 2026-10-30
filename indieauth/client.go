@@ -21,6 +21,7 @@ var (
 	ErrStateNotFound error = errors.New("state not found")
 	ErrInvalidState  error = errors.New("state does not match")
 	ErrInvalidIssuer error = errors.New("issuer does not match")
+	ErrInvalidMe     error = errors.New("me does not declare the authorization endpoint used")
 )
 
 // Client is an IndieAuth client. As a client, you want to authenticate other users
@@ -212,7 +213,8 @@ func ProfileFromToken(token *oauth2.Token) *Profile {
 // client that uses the token on future requests.
 //
 // Note that token.Raw may contain other information returned by the server, such as
-// "Me", "Profile" and "Scope".
+// "Me", "Profile" and "Scope". If "Me" is present, it is verified as in
+// [Client.FetchProfile].
 //
 //	token, oauth2, err := client.GetToken(authData, code)
 //	if err != nil {
@@ -238,6 +240,13 @@ func (c *Client) GetToken(ctx context.Context, i *AuthInfo, code string) (*oauth
 	if err != nil {
 		return nil, nil, err
 	}
+
+	if me, ok := tok.Extra("me").(string); ok {
+		if err := c.verifyMe(ctx, i, me); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	return tok, o, nil
 }
 
@@ -258,7 +267,12 @@ func (c *Client) GetOAuth2(m *Metadata) *oauth2.Config {
 // their authentication endpoint, as per [specification]. Please note that
 // this action consumes the code.
 //
+// If the returned profile URL differs from [AuthInfo.Me], FetchProfile checks
+// that it declares the same authorization endpoint, as per [confirmation], and
+// returns [ErrInvalidMe] otherwise.
+//
 // [specification]: https://indieauth.spec.indieweb.org/#profile-url-response
+// [confirmation]: https://indieauth.spec.indieweb.org/#authorization-server-confirmation
 func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*Profile, error) {
 	v := url.Values{
 		"grant_type":    {"authorization_code"},
@@ -299,5 +313,30 @@ func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*P
 		return nil, err
 	}
 
+	if err := c.verifyMe(ctx, i, profile.Me); err != nil {
+		return nil, err
+	}
+
 	return &profile, nil
+}
+
+// verifyMe checks that the authorization server is authoritative for the
+// profile URL me that it returned, as per the [specification].
+//
+// [specification]: https://indieauth.spec.indieweb.org/#authorization-server-confirmation
+func (c *Client) verifyMe(ctx context.Context, i *AuthInfo, me string) error {
+	if me == i.Me {
+		return nil
+	}
+
+	metadata, err := c.DiscoverMetadata(ctx, me)
+	if err != nil {
+		return errors.Join(ErrInvalidMe, err)
+	}
+
+	if metadata.AuthorizationEndpoint != i.AuthorizationEndpoint {
+		return ErrInvalidMe
+	}
+
+	return nil
 }
