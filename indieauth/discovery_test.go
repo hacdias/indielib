@@ -476,6 +476,11 @@ func TestDiscoverApplicationMetadataError(t *testing.T) {
 			body:     ``,
 			err:      ErrNoApplicationMetadata,
 		},
+		{
+			clientID: "http://127.0.0.1/",
+			body:     `<div class="h-app"><p class="p-name">Example App</p></div>`,
+			err:      ErrLoopbackClientID,
+		},
 	} {
 		httpClient := &http.Client{
 			Transport: &handlerRoundTripper{
