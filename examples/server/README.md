@@ -5,7 +5,7 @@ This is a server demo using the [`indielib`](../../) package. In this demo, an H
 - How to run: `go run .`
 - How to get help: `go run . --help` and read the [commented code](main.go)
 
-The example works best if not run in localhost. You can try Tailscale Funnel, ngrok, or other similar services to temporarily expose the service. This URL has to be passed via the `--client` flag.
+The example works best if not run in localhost. You can try Tailscale Funnel, ngrok, or other similar services to temporarily expose the service. This URL has to be passed via the `--profile` flag.
 
 Note that this demo does not implement all functionalities from IndieAuth/OAuth2. It also has no media endpoint, so posts that upload photos as files are not supported.
 
