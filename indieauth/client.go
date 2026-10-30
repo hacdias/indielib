@@ -35,6 +35,11 @@ type Client struct {
 
 // NewClient creates a new [Client] from the provided clientID and redirectURL.
 // If no httpClient is given, a client with a 10 second timeout will be used.
+//
+// The client fetches URLs found on the profile page of whoever signs in. The
+// default client refuses to connect to loopback addresses, including through
+// redirects and domains that resolve to loopback. A given httpClient is used as
+// is, without this check. Pass one to test locally against loopback addresses.
 func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
 	c := &Client{
 		ClientID:    clientID,
@@ -44,7 +49,7 @@ func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
 	if httpClient != nil {
 		c.Client = httpClient
 	} else {
-		c.Client = &http.Client{Timeout: defaultTimeout}
+		c.Client = newDefaultClient()
 	}
 
 	return c

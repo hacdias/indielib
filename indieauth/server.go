@@ -54,20 +54,20 @@ func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 	if httpClient != nil {
 		s.Client = httpClient
 	} else {
-		s.Client = newServerClient()
+		s.Client = newDefaultClient()
 	}
 
 	return s
 }
 
-// newServerClient returns the default HTTP client of a [Server], which refuses
-// to connect to loopback and unspecified addresses.
-func newServerClient() *http.Client {
+// newDefaultClient returns the default HTTP client of a [Client] and a [Server],
+// which refuses to connect to loopback and unspecified addresses.
+func newDefaultClient() *http.Client {
 	dialer := &net.Dialer{
 		Control: func(_, address string, _ syscall.RawConn) error {
 			ap, err := netip.ParseAddrPort(address)
 			if addr := ap.Addr().WithZone(""); err == nil && (addr.IsLoopback() || addr.IsUnspecified()) {
-				return ErrLoopbackClientID
+				return ErrLoopback
 			}
 			return nil
 		},
