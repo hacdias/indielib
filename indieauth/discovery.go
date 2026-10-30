@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"slices"
 	"strings"
@@ -377,18 +376,12 @@ type ApplicationMetadata struct {
 // has been found at a given URL.
 var ErrNoApplicationMetadata error = errors.New("application metadata (h-app, h-x-app) not found")
 
-// ErrLoopbackClientID is returned when the server would have to fetch a client
-// identifier that points to a loopback address, which the [specification] forbids.
+// ErrLoopbackClientID is returned by the default client of [NewServer] when it
+// would connect to a loopback address. The [specification] forbids fetching
+// client identifiers that point to one.
 //
 // [specification]: https://indieauth.spec.indieweb.org/#client-information-discovery
 var ErrLoopbackClientID error = errors.New("client_id is a loopback address and cannot be fetched")
-
-// isLoopback reports whether u points to a loopback address.
-func isLoopback(u *url.URL) bool {
-	host := u.Hostname()
-	ip, err := netip.ParseAddr(host)
-	return strings.EqualFold(strings.TrimSuffix(host, "."), "localhost") || (err == nil && ip.IsLoopback())
-}
 
 // DiscoverApplicationMetadata fetches metadata for the application at the
 // provided URL. This metadata is given by the `h-app` or `h-x-app` [Microformat].
@@ -409,9 +402,6 @@ func (s *Server) DiscoverApplicationMetadata(ctx context.Context, clientID strin
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, clientID, nil)
 	if err != nil {
 		return nil, err
-	}
-	if isLoopback(r.URL) {
-		return nil, ErrLoopbackClientID
 	}
 	r.Header.Add("Accept", "text/html")
 

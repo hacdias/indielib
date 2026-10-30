@@ -36,12 +36,15 @@ type Server struct {
 // NewServer creates a new [Server] that from the given options. If
 // no httpClient is given, a client with a 10 second timeout will be used.
 //
-// The server fetches client identifiers chosen by whoever sends the request,
-// but never loopback ones. The default client enforces this when connecting,
-// which also covers domains that resolve to loopback and redirects. With your
-// own httpClient, only the client identifier itself is checked. Domains that
-// resolve to private addresses are fetched. To block those, pass an httpClient
-// whose dialer rejects them.
+// The server fetches client identifiers chosen by whoever sends the request.
+// The default client refuses to connect to loopback addresses, as the
+// specification requires, including through redirects, domains that resolve to
+// loopback, and proxies on loopback. Private and link-local addresses are
+// fetched.
+//
+// A given httpClient is used as is, without any of these checks. Pass one to
+// test locally with loopback client identifiers or to use a proxy on loopback,
+// or give it a dialer that rejects private addresses for stricter checks.
 func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 	s := &Server{
 		RequirePKCE: requirePKCE,
@@ -188,9 +191,6 @@ func (s *Server) discoverRedirectURIs(ctx context.Context, clientID string) ([]s
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, clientID, nil)
 	if err != nil {
 		return nil, err
-	}
-	if isLoopback(r.URL) {
-		return nil, ErrLoopbackClientID
 	}
 	r.Header.Add("Accept", "application/json, text/html")
 
