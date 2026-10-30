@@ -195,6 +195,16 @@ func TestParseRequest(t *testing.T) {
 		}
 	})
 
+	t.Run("Keeps access_token in Form", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte("h=entry&content=hello&access_token=abc")))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req, err := ParseRequest(r)
+		require.NoError(t, err)
+		require.Equal(t, map[string][]any{"content": {"hello"}}, req.Properties)
+		require.Equal(t, "abc", r.FormValue("access_token"))
+		require.Equal(t, "entry", r.FormValue("h"))
+	})
+
 	t.Run("Invalid Requests", func(t *testing.T) {
 		for _, request := range invalidRequests {
 			r := httptest.NewRequest(http.MethodPost, "/micropub", bytes.NewReader([]byte(request.body)))

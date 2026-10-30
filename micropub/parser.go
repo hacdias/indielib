@@ -68,15 +68,12 @@ func parseFormEncoded(body url.Values) (*Request, error) {
 		req.Action = ActionCreate
 		req.Type = "h-" + typ
 
-		delete(body, "h")
-		delete(body, "access_token")
-
 		if _, ok := body["action"]; ok {
 			return nil, ErrNoActionCreate
 		}
 
 		for key, val := range body {
-			if len(val) == 0 {
+			if len(val) == 0 || key == "h" || key == "access_token" {
 				continue
 			}
 
