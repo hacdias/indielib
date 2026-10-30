@@ -116,7 +116,7 @@ func (s *Server) ParseAuthorization(r *http.Request) (*AuthenticationRequest, er
 
 	scope := r.Form.Get("scope")
 	if scope != "" {
-		req.Scopes = strings.Split(scope, " ")
+		req.Scopes = strings.Fields(scope)
 	} else if scopes := r.Form["scopes"]; len(scopes) > 0 {
 		req.Scopes = scopes
 	}
