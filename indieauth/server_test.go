@@ -190,7 +190,7 @@ func TestServerClientRejectsLoopback(t *testing.T) {
 	assert.NoError(t, err)
 
 	client := NewServer(false, nil).Client
-	for _, u := range []string{ts.URL, "http://LOCALHOST:" + port + "/"} {
+	for _, u := range []string{ts.URL, "http://LOCALHOST:" + port + "/", "http://[::1%251]:1/", "http://[::%251]:1/"} {
 		_, err := client.Get(u)
 		assert.ErrorIs(t, err, ErrLoopbackClientID, u)
 	}
