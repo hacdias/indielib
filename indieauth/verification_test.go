@@ -35,6 +35,7 @@ var invalidProfileURLs = []struct {
 	{"https://example.com:8443/", ErrPortIsSet},
 	{"https://172.28.92.51/", ErrIsIP},
 	{"https://[2001:db8::1]/", ErrIsIP},
+	{"https://[fe80::1%25en0]/", ErrIsIP},
 }
 
 func TestInvalidProfileURL(t *testing.T) {
@@ -75,6 +76,7 @@ var invalidClientIdentifier = []struct {
 	{"https://172.28.92.51/", ErrIsNonLoopback},
 	{"https://172.28.92.51:8080/", ErrIsNonLoopback},
 	{"https://[2001:db8::1]/", ErrIsNonLoopback},
+	{"https://[fe80::1%25en0]/", ErrIsNonLoopback},
 }
 
 func TestInvalidClientIdentifier(t *testing.T) {

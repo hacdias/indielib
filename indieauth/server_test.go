@@ -159,6 +159,7 @@ func TestParseAuthorization(t *testing.T) {
 			{"http://localhost:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
 			{"http://LOCALHOST:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
 			{"http://localhost.:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
+			{"http://[::1%25lo0]:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
 		} {
 			ias := NewServer(false, &http.Client{Transport: &handlerRoundTripper{handler: mux}})
 

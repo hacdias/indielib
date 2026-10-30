@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - IndieAuth: `Client.FetchProfile` and `Client.GetToken` now verify the returned `me`, as the [specification](https://indieauth.spec.indieweb.org/#authorization-server-confirmation) requires. It must be a valid profile URL and, if it differs from the profile URL used to authenticate, it must declare the same authorization endpoint, or `ErrInvalidMe` is returned. Before, a malicious authorization server could claim any profile URL.
 - IndieAuth: the server no longer fetches loopback client identifiers during redirect URI discovery or `DiscoverApplicationMetadata`, as the [specification](https://indieauth.spec.indieweb.org/#client-information-discovery) requires. It returns `ErrLoopbackClientID` instead. The default client of `NewServer` checks this when connecting, so domains that resolve to loopback and redirects are also refused. A custom client only gets the check on the client identifier itself.
 - IndieAuth: `Server.ParseAuthorization` now requires the `redirect_uri` to also match the scheme of the `client_id` before skipping redirect URI discovery. Previously, `http://app.example/cb` was accepted for `https://app.example/`.
-- IndieAuth: `IsValidProfileURL` and `IsValidClientIdentifier` no longer accept IP addresses written with a port or as IPv6, such as `https://10.0.0.1:8080/` or `https://[2001:db8::1]/`.
+- IndieAuth: `IsValidProfileURL` and `IsValidClientIdentifier` no longer accept IP addresses written with a port, as IPv6, or with an IPv6 zone, such as `https://10.0.0.1:8080/`, `https://[2001:db8::1]/` or `https://[fe80::1%25en0]/`.
 
 ## [0.6.0]
 
