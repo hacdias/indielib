@@ -54,7 +54,7 @@ func IsValidProfileURL(profile string) error {
 		return errors.Join(ErrInvalidProfileURL, ErrPortIsSet)
 	}
 
-	if net.ParseIP(url.Host) != nil {
+	if net.ParseIP(url.Hostname()) != nil {
 		return errors.Join(ErrInvalidProfileURL, ErrIsIP)
 	}
 
@@ -90,7 +90,7 @@ func IsValidClientIdentifier(identifier string) error {
 		return errors.Join(ErrInvalidClientIdentifier, ErrUserIsSet)
 	}
 
-	if v := net.ParseIP(url.Host); v != nil {
+	if v := net.ParseIP(url.Hostname()); v != nil {
 		if !v.IsLoopback() {
 			return errors.Join(ErrInvalidClientIdentifier, ErrIsNonLoopback)
 		}

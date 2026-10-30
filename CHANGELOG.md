@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- IndieAuth: `IsValidProfileURL` and `IsValidClientIdentifier` no longer accept IP addresses written with a port or as IPv6, such as `https://10.0.0.1:8080/` or `https://[2001:db8::1]/`.
+
 ## [0.6.0]
 
 ### Added
