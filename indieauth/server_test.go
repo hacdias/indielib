@@ -190,7 +190,7 @@ func TestServerClientRejectsLoopback(t *testing.T) {
 	server := NewServer(false, nil)
 	for _, u := range []string{ts.URL, "http://LOCALHOST:" + port + "/", "http://[::1%251]:1/", "http://[::%251]:1/"} {
 		_, err := server.Client.Get(u)
-		assert.ErrorIs(t, err, ErrLoopbackClientID, u)
+		assert.ErrorIs(t, err, ErrLoopback, u)
 	}
 
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
@@ -198,10 +198,10 @@ func TestServerClientRejectsLoopback(t *testing.T) {
 	r.Form.Set("client_id", ts.URL+"/")
 	r.Form.Set("redirect_uri", "https://other.example/callback")
 	_, err = server.ParseAuthorization(r)
-	assert.ErrorIs(t, err, ErrLoopbackClientID)
+	assert.ErrorIs(t, err, ErrLoopback)
 
 	_, err = server.DiscoverApplicationMetadata(context.Background(), ts.URL+"/")
-	assert.ErrorIs(t, err, ErrLoopbackClientID)
+	assert.ErrorIs(t, err, ErrLoopback)
 }
 
 func TestServerClientWithReplacedDefaultTransport(t *testing.T) {
@@ -211,7 +211,7 @@ func TestServerClientWithReplacedDefaultTransport(t *testing.T) {
 	t.Cleanup(func() { http.DefaultTransport = orig })
 
 	_, err := NewServer(false, nil).Client.Get("http://127.0.0.1:1/")
-	assert.ErrorIs(t, err, ErrLoopbackClientID)
+	assert.ErrorIs(t, err, ErrLoopback)
 }
 
 func TestValidateTokenExchange(t *testing.T) {

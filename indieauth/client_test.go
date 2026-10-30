@@ -13,6 +13,15 @@ import (
 	"golang.org/x/oauth2"
 )
 
+func TestClientRejectsLoopback(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer ts.Close()
+
+	client := NewClient("https://example.com/", "https://example.com/callback", nil)
+	_, err := client.DiscoverMetadata(context.Background(), ts.URL+"/")
+	assert.ErrorIs(t, err, ErrLoopback)
+}
+
 func TestAuthenticate(t *testing.T) {
 	t.Parallel()
 

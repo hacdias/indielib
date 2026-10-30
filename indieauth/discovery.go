@@ -376,12 +376,12 @@ type ApplicationMetadata struct {
 // has been found at a given URL.
 var ErrNoApplicationMetadata error = errors.New("application metadata (h-app, h-x-app) not found")
 
-// ErrLoopbackClientID is returned by the default client of [NewServer] when it
-// would connect to a loopback address. The [specification] forbids fetching
-// client identifiers that point to one.
+// ErrLoopback is returned by the default clients of [NewClient] and [NewServer]
+// when they would connect to a loopback address. For the server, the
+// [specification] forbids fetching client identifiers that point to one.
 //
 // [specification]: https://indieauth.spec.indieweb.org/#client-information-discovery
-var ErrLoopbackClientID error = errors.New("client_id is a loopback address and cannot be fetched")
+var ErrLoopback error = errors.New("refusing to connect to a loopback address")
 
 // DiscoverApplicationMetadata fetches metadata for the application at the
 // provided URL. This metadata is given by the `h-app` or `h-x-app` [Microformat].

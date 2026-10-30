@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - IndieAuth: `NewClient` and `NewServer` now default to an HTTP client with a 10 second timeout instead of `http.DefaultClient`, which has none.
-- IndieAuth: the default client of `NewServer` no longer sends requests through `http.DefaultTransport`, so mocks that replace it, such as httpmock or gock, don't intercept them. Pass `http.DefaultClient` to `NewServer` to keep that.
+- IndieAuth: the default clients of `NewClient` and `NewServer` no longer send requests through `http.DefaultTransport`, so mocks that replace it, such as httpmock or gock, don't intercept them. Pass `http.DefaultClient` to keep that.
 - IndieAuth: `Metadata.ServiceDocumentation` is now a `string`, matching the [specification](https://indieauth.spec.indieweb.org/#indieauth-server-metadata). Before, metadata that included it failed to decode and discovery fell back to the legacy link relations, or failed.
 
 ### Deprecated
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - IndieAuth: responses from remote URLs (metadata, profiles, client pages) are read up to 1 MiB. Before, a remote server could make the client or server use unbounded memory.
 - Micropub: JSON request bodies are limited to 10 MiB, like form-encoded ones, and larger bodies return `ErrTooLarge`.
 - IndieAuth: `Client.FetchProfile` and `Client.GetToken` now verify the returned `me`, as the [specification](https://indieauth.spec.indieweb.org/#authorization-server-confirmation) requires. It must be a valid profile URL and, if it differs from the profile URL used to authenticate, it must declare the same authorization endpoint, or `ErrInvalidMe` is returned. Before, a malicious authorization server could claim any profile URL.
-- IndieAuth: the default client of `NewServer` refuses to connect to loopback addresses, so the server no longer fetches loopback client identifiers during redirect URI discovery or `DiscoverApplicationMetadata`, as the [specification](https://indieauth.spec.indieweb.org/#client-information-discovery) requires. This covers redirects, domains that resolve to loopback, and proxies on loopback, and returns `ErrLoopbackClientID`. A client passed to `NewServer` is used as is, without this check, for example to test locally.
+- IndieAuth: the default clients of `NewClient` and `NewServer` refuse to connect to loopback addresses and return `ErrLoopback`. The server no longer fetches loopback client identifiers during redirect URI discovery or `DiscoverApplicationMetadata`, as the [specification](https://indieauth.spec.indieweb.org/#client-information-discovery) requires. The client no longer follows links on a user's profile page to loopback addresses. This covers redirects, domains that resolve to loopback, and proxies on loopback. A client passed to `NewClient` or `NewServer` is used as is, without this check, for example to test locally.
 - IndieAuth: `Server.ParseAuthorization` now requires the `redirect_uri` to also match the scheme of the `client_id` before skipping redirect URI discovery. Previously, `http://app.example/cb` was accepted for `https://app.example/`.
 - IndieAuth: `IsValidProfileURL` and `IsValidClientIdentifier` no longer accept IP addresses written with a port, as IPv6, or with an IPv6 zone, such as `https://10.0.0.1:8080/`, `https://[2001:db8::1]/` or `https://[fe80::1%25en0]/`.
 
