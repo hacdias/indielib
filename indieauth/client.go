@@ -293,11 +293,11 @@ func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*P
 		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)
 	}
 
-	var profile *Profile
+	var profile Profile
 	err = json.Unmarshal(data, &profile)
 	if err != nil {
 		return nil, err
 	}
 
-	return profile, nil
+	return &profile, nil
 }

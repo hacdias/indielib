@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- IndieAuth: `Client.Authenticate` no longer panics when the server metadata is `null`. Metadata without an `authorization_endpoint` is treated as not found, and discovery falls back to the legacy link relations. `Client.FetchProfile` no longer returns a nil profile for a `null` response.
 - IndieAuth: `IsValidProfileURL` and `IsValidClientIdentifier` now reject only `.` and `..` path segments, as the specification says, instead of any dot in the path. URLs like `https://example.com/jane.doe` are now valid.
 - Microformats: `DiscoverType` now collapses whitespace in `name` and `content`, and reads plain-string `content`. Both cases were wrongly reported as articles.
 - Micropub: `?q=config` no longer panics when `WithGetPostStatuses` is not set.
