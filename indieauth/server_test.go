@@ -133,6 +133,7 @@ func TestParseAuthorization(t *testing.T) {
 		}{
 			{"https://example.com/app/", "https://other.example/callback", nil},
 			{"https://example.com/app/", "https://other.example/nope", ErrInvalidRedirectURI},
+			{"https://example.com/app/", "http://example.com/app/callback", ErrInvalidRedirectURI},
 			{"https://example.com/html/", "https://other.example/callback", nil},
 			{"https://example.com/html/", "https://another.example/callback", nil},
 			{"https://example.com/html/", "https://header.example/callback", nil},

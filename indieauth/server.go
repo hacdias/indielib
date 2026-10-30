@@ -134,7 +134,7 @@ func (s *Server) validateRedirectURI(ctx context.Context, clientID, redirectURI 
 		return errors.Join(ErrInvalidRedirectURI, err)
 	}
 
-	if redirect.Host == client.Host {
+	if redirect.Scheme == client.Scheme && redirect.Host == client.Host {
 		return nil
 	}
 
