@@ -97,6 +97,10 @@ func parseFormEncoded(body url.Values) (*Request, error) {
 			return nil, ErrNoFormUpdate
 		}
 
+		if action == string(ActionCreate) {
+			return nil, ErrNoData
+		}
+
 		if url := body.Get("url"); url != "" {
 			req.URL = url
 		} else {
@@ -139,6 +143,10 @@ func parseJSON(r io.Reader) (*Request, error) {
 			return nil, ErrMultipleTypes
 		}
 
+		if body.Action != "" {
+			return nil, ErrNoActionCreate
+		}
+
 		req.Properties = map[string][]interface{}{}
 		req.Commands = map[string][]interface{}{}
 		req.Action = ActionCreate
@@ -156,6 +164,10 @@ func parseJSON(r io.Reader) (*Request, error) {
 	}
 
 	if body.Action != "" {
+		if body.Action == ActionCreate {
+			return nil, ErrNoData
+		}
+
 		if body.URL == "" {
 			return nil, ErrNoURL
 		}
