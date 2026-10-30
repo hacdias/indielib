@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- IndieAuth: `Metadata.ServiceDocumentation` is now a `string`, matching the [specification](https://indieauth.spec.indieweb.org/#indieauth-server-metadata). Before, metadata that included it failed to decode and discovery fell back to the legacy link relations, or failed.
+
 ### Deprecated
 
 ### Removed
