@@ -31,6 +31,10 @@ type Server struct {
 
 // NewServer creates a new [Server] that from the given options. If
 // no httpClient is given, [http.DefaultClient] will be used.
+//
+// The server fetches client identifiers chosen by whoever sends the request.
+// Loopback addresses are never fetched, but domains that resolve to private
+// addresses are. To block those, pass an httpClient whose dialer rejects them.
 func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 	s := &Server{
 		RequirePKCE: requirePKCE,
@@ -159,6 +163,9 @@ func (s *Server) discoverRedirectURIs(ctx context.Context, clientID string) ([]s
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, clientID, nil)
 	if err != nil {
 		return nil, err
+	}
+	if isLoopback(r.URL) {
+		return nil, ErrLoopbackClientID
 	}
 	r.Header.Add("Accept", "application/json, text/html")
 

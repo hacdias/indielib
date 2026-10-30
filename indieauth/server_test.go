@@ -124,24 +124,25 @@ func TestParseAuthorization(t *testing.T) {
 			w.Header().Set("Content-Type", "text/html")
 			_, _ = w.Write([]byte(`<html></html>`))
 		})
-		ts := httptest.NewServer(mux)
-		defer ts.Close()
+		mux.HandleFunc("/missing/", http.NotFound)
 
 		for _, testCase := range []struct {
 			clientID      string
 			redirectURI   string
 			expectedError error
 		}{
-			{ts.URL + "/app/", "https://other.example/callback", nil},
-			{ts.URL + "/app/", "https://other.example/nope", ErrInvalidRedirectURI},
-			{ts.URL + "/html/", "https://other.example/callback", nil},
-			{ts.URL + "/html/", "https://another.example/callback", nil},
-			{ts.URL + "/html/", "https://header.example/callback", nil},
-			{ts.URL + "/html/", "https://other.example/nope", ErrInvalidRedirectURI},
-			{ts.URL + "/html-empty/", "https://other.example/callback", ErrInvalidRedirectURI},
-			{ts.URL + "/missing/", "https://other.example/callback", ErrInvalidRedirectURI},
+			{"https://example.com/app/", "https://other.example/callback", nil},
+			{"https://example.com/app/", "https://other.example/nope", ErrInvalidRedirectURI},
+			{"https://example.com/html/", "https://other.example/callback", nil},
+			{"https://example.com/html/", "https://another.example/callback", nil},
+			{"https://example.com/html/", "https://header.example/callback", nil},
+			{"https://example.com/html/", "https://other.example/nope", ErrInvalidRedirectURI},
+			{"https://example.com/html-empty/", "https://other.example/callback", ErrInvalidRedirectURI},
+			{"https://example.com/missing/", "https://other.example/callback", ErrInvalidRedirectURI},
+			{"http://127.0.0.1:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
+			{"http://localhost:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
 		} {
-			ias := NewServer(false, ts.Client())
+			ias := NewServer(false, &http.Client{Transport: &handlerRoundTripper{handler: mux}})
 
 			r := httptest.NewRequest(http.MethodPost, "/", nil)
 			r.Form = url.Values{}
