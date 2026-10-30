@@ -123,6 +123,7 @@ func WithGetPostStatuses(getPostStatuses func() []string) Option {
 // code, as well as JSON error, will be set accordingly.
 type Implementation interface {
 	// HasScope returns whether or not the request is authorized for a certain scope.
+	// It is only called for POST requests. GET queries are not scope-checked.
 	HasScope(r *http.Request, scope string) bool
 
 	// Source returns the Microformats source of a certain URL.
@@ -168,6 +169,11 @@ type handler struct {
 //   - GET /micropub?q=channel
 //   - POST /micropub (form-encoded): create, delete, undelete
 //   - POST /micropub (json): create, update, delete, undelete
+//
+// The handler does not authenticate GET queries: ?q=source reaches
+// [Implementation.Source] and [Implementation.SourceMany] without calling
+// [Implementation.HasScope]. If your posts, such as drafts, are not all public,
+// mount the handler behind your own authentication middleware.
 //
 // [specification]: https://micropub.spec.indieweb.org/
 func NewHandler(impl Implementation, options ...Option) http.Handler {
