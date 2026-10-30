@@ -384,6 +384,7 @@ func TestVerifyMe(t *testing.T) {
 		{"https://example.com/same", nil},
 		{"https://example.com/other", ErrInvalidMe},
 		{"https://example.com/missing", ErrInvalidMe},
+		{"http://169.254.169.254/", ErrIsIP},
 	} {
 		me = testCase.me
 
