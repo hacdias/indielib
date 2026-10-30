@@ -1,6 +1,7 @@
 package indieauth
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -155,11 +156,8 @@ func TestParseAuthorization(t *testing.T) {
 			{"https://example.com/html/", "https://other.example/nope", ErrInvalidRedirectURI},
 			{"https://example.com/html-empty/", "https://other.example/callback", ErrInvalidRedirectURI},
 			{"https://example.com/missing/", "https://other.example/callback", ErrInvalidRedirectURI},
-			{"http://127.0.0.1:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
-			{"http://localhost:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
-			{"http://LOCALHOST:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
-			{"http://localhost.:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
-			{"http://[::1%25lo0]:8080/app/", "https://other.example/callback", ErrLoopbackClientID},
+			// A given client is used as is, so loopback client identifiers are fetched.
+			{"http://127.0.0.1:8080/app/", "https://other.example/callback", nil},
 		} {
 			ias := NewServer(false, &http.Client{Transport: &handlerRoundTripper{handler: mux}})
 
@@ -189,11 +187,21 @@ func TestServerClientRejectsLoopback(t *testing.T) {
 	_, port, err := net.SplitHostPort(ts.Listener.Addr().String())
 	assert.NoError(t, err)
 
-	client := NewServer(false, nil).Client
+	server := NewServer(false, nil)
 	for _, u := range []string{ts.URL, "http://LOCALHOST:" + port + "/", "http://[::1%251]:1/", "http://[::%251]:1/"} {
-		_, err := client.Get(u)
+		_, err := server.Client.Get(u)
 		assert.ErrorIs(t, err, ErrLoopbackClientID, u)
 	}
+
+	r := httptest.NewRequest(http.MethodPost, "/", nil)
+	r.Form = url.Values{}
+	r.Form.Set("client_id", ts.URL+"/")
+	r.Form.Set("redirect_uri", "https://other.example/callback")
+	_, err = server.ParseAuthorization(r)
+	assert.ErrorIs(t, err, ErrLoopbackClientID)
+
+	_, err = server.DiscoverApplicationMetadata(context.Background(), ts.URL+"/")
+	assert.ErrorIs(t, err, ErrLoopbackClientID)
 }
 
 func TestValidateTokenExchange(t *testing.T) {
