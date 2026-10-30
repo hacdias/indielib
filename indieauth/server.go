@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	urlpkg "net/url"
 	"slices"
 	"strings"
@@ -60,8 +61,8 @@ func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 func newServerClient() *http.Client {
 	dialer := &net.Dialer{
 		Control: func(_, address string, _ syscall.RawConn) error {
-			host, _, _ := net.SplitHostPort(address)
-			if ip := net.ParseIP(host); ip.IsLoopback() || ip.IsUnspecified() {
+			ap, err := netip.ParseAddrPort(address)
+			if addr := ap.Addr().WithZone(""); err == nil && (addr.IsLoopback() || addr.IsUnspecified()) {
 				return ErrLoopbackClientID
 			}
 			return nil
