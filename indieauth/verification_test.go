@@ -11,6 +11,7 @@ var validProfileURLs = []string{
 	"https://example.com/",
 	"https://example.com/username",
 	"https://example.com/users?id=100",
+	"https://example.com/jane.doe",
 }
 
 func TestValidProfileURL(t *testing.T) {
@@ -28,6 +29,7 @@ var invalidProfileURLs = []struct {
 	{"mailto:user@example.com", ErrInvalidScheme},
 	{"https://example.com", ErrEmptyPath},
 	{"https://example.com/foo/../bar", ErrInvalidPath},
+	{"https://example.com/foo/./bar", ErrInvalidPath},
 	{"https://example.com/#me", ErrInvalidFragment},
 	{"https://user:pass@example.com/", ErrUserIsSet},
 	{"https://example.com:8443/", ErrPortIsSet},
@@ -46,6 +48,7 @@ var validClientIdentifiers = []string{
 	"https://example.com/",
 	"https://example.com/username",
 	"https://example.com/users?id=100",
+	"https://example.com/client.json",
 	"https://example.com:8443/",
 	"https://127.0.0.1/",
 	"https://127.0.0.1:8080/",

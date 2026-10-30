@@ -13,7 +13,7 @@ var (
 
 	ErrInvalidScheme   error = errors.New("scheme must be either http or https")
 	ErrEmptyPath       error = errors.New("path must not be empty")
-	ErrInvalidPath     error = errors.New("path cannot contain single or double dots")
+	ErrInvalidPath     error = errors.New("path cannot contain single-dot or double-dot segments")
 	ErrInvalidFragment error = errors.New("fragment must be empty")
 	ErrUserIsSet       error = errors.New("user and or password must not be set")
 	ErrPortIsSet       error = errors.New("port must not be set")
@@ -25,29 +25,9 @@ var (
 //
 // [specification]: https://indieauth.spec.indieweb.org/#user-profile-url
 func IsValidProfileURL(profile string) error {
-	url, err := urlpkg.Parse(profile)
+	url, err := parseURL(profile)
 	if err != nil {
 		return errors.Join(ErrInvalidProfileURL, err)
-	}
-
-	if url.Scheme != "http" && url.Scheme != "https" {
-		return errors.Join(ErrInvalidProfileURL, ErrInvalidScheme)
-	}
-
-	if url.Path == "" {
-		return errors.Join(ErrInvalidProfileURL, ErrEmptyPath)
-	}
-
-	if strings.Contains(url.Path, ".") || strings.Contains(url.Path, "..") {
-		return errors.Join(ErrInvalidProfileURL, ErrInvalidPath)
-	}
-
-	if url.Fragment != "" {
-		return errors.Join(ErrInvalidProfileURL, ErrInvalidFragment)
-	}
-
-	if url.User.String() != "" {
-		return errors.Join(ErrInvalidProfileURL, ErrUserIsSet)
 	}
 
 	if url.Port() != "" {
@@ -65,29 +45,9 @@ func IsValidProfileURL(profile string) error {
 //
 // [specification]: https://indieauth.spec.indieweb.org/#client-identifier
 func IsValidClientIdentifier(identifier string) error {
-	url, err := urlpkg.Parse(identifier)
+	url, err := parseURL(identifier)
 	if err != nil {
 		return errors.Join(ErrInvalidClientIdentifier, err)
-	}
-
-	if url.Scheme != "http" && url.Scheme != "https" {
-		return errors.Join(ErrInvalidClientIdentifier, ErrInvalidScheme)
-	}
-
-	if url.Path == "" {
-		return errors.Join(ErrInvalidClientIdentifier, ErrEmptyPath)
-	}
-
-	if strings.Contains(url.Path, ".") || strings.Contains(url.Path, "..") {
-		return errors.Join(ErrInvalidClientIdentifier, ErrInvalidPath)
-	}
-
-	if url.Fragment != "" {
-		return errors.Join(ErrInvalidClientIdentifier, ErrInvalidFragment)
-	}
-
-	if url.User.String() != "" {
-		return errors.Join(ErrInvalidClientIdentifier, ErrUserIsSet)
 	}
 
 	if v := net.ParseIP(url.Hostname()); v != nil {
@@ -97,6 +57,39 @@ func IsValidClientIdentifier(identifier string) error {
 	}
 
 	return nil
+}
+
+// parseURL parses a URL and checks the rules shared by profile URLs and client
+// identifiers.
+func parseURL(rawURL string) (*urlpkg.URL, error) {
+	url, err := urlpkg.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if url.Scheme != "http" && url.Scheme != "https" {
+		return nil, ErrInvalidScheme
+	}
+
+	if url.Path == "" {
+		return nil, ErrEmptyPath
+	}
+
+	for _, segment := range strings.Split(url.Path, "/") {
+		if segment == "." || segment == ".." {
+			return nil, ErrInvalidPath
+		}
+	}
+
+	if url.Fragment != "" {
+		return nil, ErrInvalidFragment
+	}
+
+	if url.User.String() != "" {
+		return nil, ErrUserIsSet
+	}
+
+	return url, nil
 }
 
 // CanonicalizeURL checks if a URL has a path, and appends a path "/""
