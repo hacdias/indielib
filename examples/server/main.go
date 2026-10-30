@@ -85,6 +85,9 @@ var (
 )
 
 func (s *server) generalHandler(w http.ResponseWriter, r *http.Request) {
+	s.postsMu.RLock()
+	defer s.postsMu.RUnlock()
+
 	if r.URL.Path == "/" {
 		serveHTML(w, "index.html", map[string]any{
 			"Profile": s.profileURL,
@@ -93,8 +96,6 @@ func (s *server) generalHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.postsMu.RLock()
-	defer s.postsMu.RUnlock()
 	if post, ok := s.posts[r.URL.Path]; ok {
 		serveHTML(w, "post.html", post)
 		return
