@@ -244,6 +244,7 @@ func TestGetToken(t *testing.T) {
 		Metadata: Metadata{
 			TokenEndpoint: "https://example.com/token",
 		},
+		Me:           "https://example.com/john",
 		CodeVerifier: codeVerifier,
 	}
 
@@ -330,10 +331,66 @@ func TestFetchProfile(t *testing.T) {
 		Metadata: Metadata{
 			AuthorizationEndpoint: "https://example.com/auth",
 		},
+		Me:           "https://example.com/john",
 		CodeVerifier: codeVerifier,
 	}
 
 	profile, err := client.FetchProfile(context.Background(), authInfo, code)
 	require.Nil(t, err)
 	require.EqualValues(t, originalProfile, profile)
+}
+
+func TestVerifyMe(t *testing.T) {
+	var me string
+
+	client := NewClient(
+		"https://example.com/",
+		"https://example.com/callback",
+		&http.Client{
+			Transport: &handlerRoundTripper{
+				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					switch r.URL.Path {
+					case "/auth":
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(`{"me":"` + me + `"}`))
+					case "/token":
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(`{"me":"` + me + `","access_token":"token"}`))
+					case "/same":
+						w.Header().Set("Link", `</auth>; rel="authorization_endpoint"`)
+					case "/other":
+						w.Header().Set("Link", `<https://example.org/auth>; rel="authorization_endpoint"`)
+					default:
+						w.WriteHeader(http.StatusNotFound)
+					}
+				}),
+			},
+		},
+	)
+
+	authInfo := &AuthInfo{
+		Metadata: Metadata{
+			AuthorizationEndpoint: "https://example.com/auth",
+			TokenEndpoint:         "https://example.com/token",
+		},
+		Me: "https://example.com/",
+	}
+
+	for _, testCase := range []struct {
+		me  string
+		err error
+	}{
+		{"https://example.com/", nil},
+		{"https://example.com/same", nil},
+		{"https://example.com/other", ErrInvalidMe},
+		{"https://example.com/missing", ErrInvalidMe},
+	} {
+		me = testCase.me
+
+		_, err := client.FetchProfile(context.Background(), authInfo, "code")
+		assert.ErrorIs(t, err, testCase.err, testCase.me)
+
+		_, _, err = client.GetToken(context.Background(), authInfo, "code")
+		assert.ErrorIs(t, err, testCase.err, testCase.me)
+	}
 }
