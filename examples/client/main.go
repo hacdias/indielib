@@ -3,11 +3,11 @@ package main
 import (
 	"errors"
 	"flag"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
-	"text/template"
 	"time"
 
 	"go.hacdias.com/indielib/indieauth"
