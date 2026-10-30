@@ -92,13 +92,17 @@ func (c *Client) discoverMetadata(ctx context.Context, urlStr string) (*Metadata
 		return nil, fmt.Errorf("status code: expected 200, got %d", res.StatusCode)
 	}
 
-	var metadata *Metadata
+	var metadata Metadata
 	err = json.Unmarshal(data, &metadata)
 	if err != nil {
 		return nil, err
 	}
 
-	return metadata, nil
+	if metadata.AuthorizationEndpoint == "" {
+		return nil, ErrNoEndpointFound
+	}
+
+	return &metadata, nil
 }
 
 // DiscoverLinkEndpoint discovers as given endpoint identified by rel.

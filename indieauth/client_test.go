@@ -36,6 +36,33 @@ func TestAuthenticate(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("Fails If Metadata Has No Authorization Endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		for _, body := range []string{`null`, `{}`} {
+			client := NewClient(
+				"https://example.com/",
+				"https://example.com/callback",
+				&http.Client{
+					Transport: &handlerRoundTripper{
+						handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							if r.URL.Path == "/metadata" {
+								w.Header().Set("Content-Type", "application/json; charset=utf-8")
+								_, _ = w.Write([]byte(body))
+								return
+							}
+
+							w.Header().Set("Link", `</metadata>; rel="indieauth-metadata"`)
+						}),
+					},
+				},
+			)
+
+			_, _, err := client.Authenticate(context.Background(), "https://example.com/", "profile post")
+			require.ErrorIs(t, err, ErrNoEndpointFound, body)
+		}
+	})
+
 	t.Run("Successful Request", func(t *testing.T) {
 		t.Parallel()
 
