@@ -98,14 +98,7 @@ func (c *Client) Authenticate(ctx context.Context, profile, scope string) (*Auth
 		return nil, "", err
 	}
 
-	o := &oauth2.Config{
-		ClientID:    c.ClientID,
-		RedirectURL: c.RedirectURL,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  metadata.AuthorizationEndpoint,
-			TokenURL: metadata.TokenEndpoint,
-		},
-	}
+	o := c.GetOAuth2(metadata)
 
 	state, err := newState()
 	if err != nil {
