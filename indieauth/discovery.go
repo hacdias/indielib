@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -23,6 +24,14 @@ const (
 	TokenEndpointRel         string = "token_endpoint"
 	IndieAuthMetadataRel     string = "indieauth-metadata"
 	RedirectURIRel           string = "redirect_uri"
+)
+
+const (
+	// maxResponseSize is the maximum number of bytes read from a remote response.
+	maxResponseSize = 1 << 20
+
+	// defaultTimeout is the timeout of the HTTP client used when none is given.
+	defaultTimeout = 10 * time.Second
 )
 
 // ErrNoEndpointFound is returned when no endpoint can be found for a certain
@@ -83,7 +92,7 @@ func (c *Client) discoverMetadata(ctx context.Context, urlStr string) (*Metadata
 		_ = res.Body.Close()
 	}()
 
-	data, err := io.ReadAll(res.Body)
+	data, err := io.ReadAll(io.LimitReader(res.Body, maxResponseSize))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +196,7 @@ func extractEndpoints(resp *http.Response, rels ...string) ([]*endpointRequest, 
 	}
 
 	// then look in the HTML body
-	htmlEndpoints, _, err := htmlLink(resp.Body, rels...)
+	htmlEndpoints, _, err := htmlLink(io.LimitReader(resp.Body, maxResponseSize), rels...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -299,7 +308,7 @@ func extractAllLinks(resp *http.Response, rel string) ([]string, error) {
 		}
 	}
 
-	doc, err := html.Parse(resp.Body)
+	doc, err := html.Parse(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +432,7 @@ func (s *Server) DiscoverApplicationMetadata(ctx context.Context, clientID strin
 		return nil, fmt.Errorf("content-type: expected to include text/html, got '%q'", contentType)
 	}
 
-	data := microformats.Parse(res.Body, res.Request.URL)
+	data := microformats.Parse(io.LimitReader(res.Body, maxResponseSize), res.Request.URL)
 	if data == nil {
 		return nil, ErrNoApplicationMetadata
 	}

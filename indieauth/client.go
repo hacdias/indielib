@@ -35,7 +35,7 @@ type Client struct {
 }
 
 // NewClient creates a new [Client] from the provided clientID and redirectURL.
-// If no httpClient is given, [http.DefaultClient] will be used.
+// If no httpClient is given, a client with a 10 second timeout will be used.
 func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
 	c := &Client{
 		ClientID:    clientID,
@@ -45,7 +45,7 @@ func NewClient(clientID, redirectURL string, httpClient *http.Client) *Client {
 	if httpClient != nil {
 		c.Client = httpClient
 	} else {
-		c.Client = http.DefaultClient
+		c.Client = &http.Client{Timeout: defaultTimeout}
 	}
 
 	return c
@@ -298,7 +298,7 @@ func (c *Client) FetchProfile(ctx context.Context, i *AuthInfo, code string) (*P
 		_ = res.Body.Close()
 	}()
 
-	data, err := io.ReadAll(res.Body)
+	data, err := io.ReadAll(io.LimitReader(res.Body, maxResponseSize))
 	if err != nil {
 		return nil, err
 	}

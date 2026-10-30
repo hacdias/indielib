@@ -15,7 +15,12 @@ var (
 	ErrNoData         = errors.New("no micropub data was found in the request")
 	ErrNoActionCreate = errors.New("cannot specify an action when creating a post")
 	ErrMultipleTypes  = errors.New("type must have a single value")
+	ErrTooLarge       = errors.New("request body too large")
 )
+
+// maxJSONSize is the maximum size of a JSON request body. It matches the limit
+// that [http.Request.ParseForm] applies to form-encoded bodies.
+const maxJSONSize = 10 << 20
 
 // Action represents a Micropub action.
 type Action string
@@ -125,9 +130,13 @@ type requestJSON struct {
 }
 
 func parseJSON(r io.Reader) (*Request, error) {
-	data, err := io.ReadAll(r)
+	data, err := io.ReadAll(io.LimitReader(r, maxJSONSize+1))
 	if err != nil {
 		return nil, err
+	}
+
+	if len(data) > maxJSONSize {
+		return nil, ErrTooLarge
 	}
 
 	body := requestJSON{}

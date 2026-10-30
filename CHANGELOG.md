@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- IndieAuth: `NewClient` and `NewServer` now default to an HTTP client with a 10 second timeout instead of `http.DefaultClient`, which has none.
 - IndieAuth: `Metadata.ServiceDocumentation` is now a `string`, matching the [specification](https://indieauth.spec.indieweb.org/#indieauth-server-metadata). Before, metadata that included it failed to decode and discovery fell back to the legacy link relations, or failed.
 
 ### Deprecated
@@ -29,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- IndieAuth: responses from remote URLs (metadata, profiles, client pages) are read up to 1 MiB. Before, a remote server could make the client or server use unbounded memory.
+- Micropub: JSON request bodies are limited to 10 MiB, like form-encoded ones, and larger bodies return `ErrTooLarge`.
 - IndieAuth: `Client.FetchProfile` and `Client.GetToken` now verify the returned `me`, as the [specification](https://indieauth.spec.indieweb.org/#authorization-server-confirmation) requires. If it differs from the profile URL used to authenticate, it must declare the same authorization endpoint, or `ErrInvalidMe` is returned. Before, a malicious authorization server could claim any profile URL.
 - IndieAuth: the server no longer fetches loopback client identifiers (`localhost`, `127.0.0.1`, `[::1]`) during redirect URI discovery or `DiscoverApplicationMetadata`, as the [specification](https://indieauth.spec.indieweb.org/#client-information-discovery) requires. It returns `ErrLoopbackClientID` instead.
 - IndieAuth: `Server.ParseAuthorization` now requires the `redirect_uri` to also match the scheme of the `client_id` before skipping redirect URI discovery. Previously, `http://app.example/cb` was accepted for `https://app.example/`.

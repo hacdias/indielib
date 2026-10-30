@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,6 +46,30 @@ func TestDiscoverMetadata(t *testing.T) {
 		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
 		assert.EqualValues(t, "https://example.org/docs", endpoints.ServiceDocumentation)
 	}
+}
+
+func TestDiscoverMetadataTooLarge(t *testing.T) {
+	client := NewClient(
+		"https://example.com/",
+		"https://example.com/redirect",
+		&http.Client{
+			Transport: &handlerRoundTripper{
+				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.Path == "/metadata" {
+						w.Header().Set("Content-Type", "application/json; charset=utf-8")
+						_, _ = w.Write([]byte(strings.Repeat(" ", maxResponseSize)))
+						_, _ = w.Write([]byte(`{"authorization_endpoint": "https://example.org/auth"}`))
+						return
+					}
+
+					w.Header().Set("Link", `</metadata>; rel="indieauth-metadata"`)
+				}),
+			},
+		},
+	)
+
+	_, err := client.DiscoverMetadata(context.Background(), "https://example.org/")
+	assert.ErrorIs(t, err, ErrNoEndpointFound)
 }
 
 func TestDiscoverMetadataNoToken(t *testing.T) {

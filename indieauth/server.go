@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	urlpkg "net/url"
 	"slices"
@@ -30,7 +31,7 @@ type Server struct {
 }
 
 // NewServer creates a new [Server] that from the given options. If
-// no httpClient is given, [http.DefaultClient] will be used.
+// no httpClient is given, a client with a 10 second timeout will be used.
 //
 // The server fetches client identifiers chosen by whoever sends the request.
 // Loopback addresses are never fetched, but domains that resolve to private
@@ -43,7 +44,7 @@ func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 	if httpClient != nil {
 		s.Client = httpClient
 	} else {
-		s.Client = http.DefaultClient
+		s.Client = &http.Client{Timeout: defaultTimeout}
 	}
 
 	return s
@@ -189,7 +190,7 @@ func (s *Server) discoverRedirectURIs(ctx context.Context, clientID string) ([]s
 		RedirectURIs []string `json:"redirect_uris"`
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&metadata); err != nil {
+	if err := json.NewDecoder(io.LimitReader(res.Body, maxResponseSize)).Decode(&metadata); err != nil {
 		return nil, err
 	}
 
