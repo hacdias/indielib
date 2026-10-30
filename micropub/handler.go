@@ -172,12 +172,13 @@ type handler struct {
 // [specification]: https://micropub.spec.indieweb.org/
 func NewHandler(impl Implementation, options ...Option) http.Handler {
 	conf := &Configuration{
-		MediaEndpoint:  "",
-		GetSyndicateTo: func() []Syndication { return nil },
-		GetChannels:    func() []Channel { return nil },
-		GetCategories:  func() []string { return nil },
-		GetPostTypes:   func() []PostType { return nil },
-		GetVisibility:  func() []string { return nil },
+		MediaEndpoint:   "",
+		GetSyndicateTo:  func() []Syndication { return nil },
+		GetChannels:     func() []Channel { return nil },
+		GetCategories:   func() []string { return nil },
+		GetPostStatuses: func() []string { return nil },
+		GetPostTypes:    func() []PostType { return nil },
+		GetVisibility:   func() []string { return nil },
 	}
 
 	for _, opt := range options {

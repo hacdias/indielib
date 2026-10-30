@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Micropub: `?q=config` no longer panics when `WithGetPostStatuses` is not set.
+
 ### Security
 
 ## [0.6.0]
