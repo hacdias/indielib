@@ -32,6 +32,7 @@ var invalidProfileURLs = []struct {
 	{"https://user:pass@example.com/", ErrUserIsSet},
 	{"https://example.com:8443/", ErrPortIsSet},
 	{"https://172.28.92.51/", ErrIsIP},
+	{"https://[2001:db8::1]/", ErrIsIP},
 }
 
 func TestInvalidProfileURL(t *testing.T) {
@@ -47,7 +48,9 @@ var validClientIdentifiers = []string{
 	"https://example.com/users?id=100",
 	"https://example.com:8443/",
 	"https://127.0.0.1/",
+	"https://127.0.0.1:8080/",
 	"https://[::1]/",
+	"https://[::1]:8080/",
 }
 
 func TestValidClientIdentifier(t *testing.T) {
@@ -67,6 +70,8 @@ var invalidClientIdentifier = []struct {
 	{"https://example.com/#me", ErrInvalidFragment},
 	{"https://user:pass@example.com/", ErrUserIsSet},
 	{"https://172.28.92.51/", ErrIsNonLoopback},
+	{"https://172.28.92.51:8080/", ErrIsNonLoopback},
+	{"https://[2001:db8::1]/", ErrIsNonLoopback},
 }
 
 func TestInvalidClientIdentifier(t *testing.T) {
