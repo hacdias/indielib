@@ -92,12 +92,12 @@ func parseURL(rawURL string) (*urlpkg.URL, error) {
 	return url, nil
 }
 
-// CanonicalizeURL checks if a URL has a path, and appends a path "/""
-// if it has no path.
+// CanonicalizeURL adds an https scheme if the URL has none, lowercases the
+// host, and appends a path "/" if it has no path.
 func CanonicalizeURL(urlStr string) string {
 	// NOTE: parsing a URL without scheme will most likely put the host as path.
 	// That's why I add it first.
-	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
+	if s := strings.ToLower(urlStr); !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 		urlStr = "https://" + urlStr
 	}
 
@@ -106,6 +106,7 @@ func CanonicalizeURL(urlStr string) string {
 		return urlStr
 	}
 
+	url.Host = strings.ToLower(url.Host)
 	if url.Path == "" {
 		url.Path = "/"
 	}

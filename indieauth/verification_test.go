@@ -91,6 +91,8 @@ var canonicalizeTests = [][2]string{
 	{"http://example.com", "http://example.com/"},
 	{"https://example.com", "https://example.com/"},
 	{"example.com/", "https://example.com/"},
+	{"Https://Example.com", "https://example.com/"},
+	{"HTTP://EXAMPLE.COM/Foo", "http://example.com/Foo"},
 }
 
 func TestCanonicalizeURL(t *testing.T) {

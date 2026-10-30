@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- IndieAuth: `CanonicalizeURL` now recognizes the scheme in any case, such as `Https://` from mobile keyboards, and lowercases the host. Before, `Https://example.com` became `https://Https://example.com`.
 - IndieAuth: `Server.ParseAuthorization` no longer returns empty scopes when `scope` has repeated or surrounding spaces.
 - IndieAuth: `Client.Authenticate` no longer panics when the server metadata is `null`. Metadata without an `authorization_endpoint` is treated as not found, and discovery falls back to the legacy link relations. `Client.FetchProfile` no longer returns a nil profile for a `null` response.
 - IndieAuth: `IsValidProfileURL` and `IsValidClientIdentifier` now reject only `.` and `..` path segments, as the specification says, instead of any dot in the path. URLs like `https://example.com/jane.doe` are now valid.
