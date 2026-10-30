@@ -2,7 +2,7 @@ package indieauth
 
 import (
 	"errors"
-	"net"
+	"net/netip"
 	urlpkg "net/url"
 	"strings"
 )
@@ -34,7 +34,7 @@ func IsValidProfileURL(profile string) error {
 		return errors.Join(ErrInvalidProfileURL, ErrPortIsSet)
 	}
 
-	if net.ParseIP(url.Hostname()) != nil {
+	if _, err := netip.ParseAddr(url.Hostname()); err == nil {
 		return errors.Join(ErrInvalidProfileURL, ErrIsIP)
 	}
 
@@ -50,7 +50,7 @@ func IsValidClientIdentifier(identifier string) error {
 		return errors.Join(ErrInvalidClientIdentifier, err)
 	}
 
-	if v := net.ParseIP(url.Hostname()); v != nil {
+	if v, err := netip.ParseAddr(url.Hostname()); err == nil {
 		if !v.IsLoopback() {
 			return errors.Join(ErrInvalidClientIdentifier, ErrIsNonLoopback)
 		}

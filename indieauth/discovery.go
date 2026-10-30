@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"slices"
 	"strings"
@@ -386,8 +386,8 @@ var ErrLoopbackClientID error = errors.New("client_id is a loopback address and 
 // isLoopback reports whether u points to a loopback address.
 func isLoopback(u *url.URL) bool {
 	host := u.Hostname()
-	ip := net.ParseIP(host)
-	return strings.EqualFold(strings.TrimSuffix(host, "."), "localhost") || (ip != nil && ip.IsLoopback())
+	ip, err := netip.ParseAddr(host)
+	return strings.EqualFold(strings.TrimSuffix(host, "."), "localhost") || (err == nil && ip.IsLoopback())
 }
 
 // DiscoverApplicationMetadata fetches metadata for the application at the
