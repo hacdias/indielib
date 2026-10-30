@@ -4,6 +4,7 @@ import (
 	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"slices"
 )
 
 // CodeChallengeMethods are the code challenge methods that are supported by
@@ -15,7 +16,7 @@ var CodeChallengeMethods = []string{
 // IsValidCodeChallengeMethod returns whether the provided code challenge method
 // is valid or not.
 func IsValidCodeChallengeMethod(ccm string) bool {
-	return containsString(CodeChallengeMethods, ccm)
+	return slices.Contains(CodeChallengeMethods, ccm)
 }
 
 // ValidateCodeChallenge validates a code challenge against its code verifier.
@@ -63,13 +64,4 @@ func newVerifier() (string, error) {
 func s256Challenge(verifier string) string {
 	s := sha256.Sum256([]byte(verifier))
 	return base64.RawURLEncoding.EncodeToString(s[:])
-}
-
-func containsString(s []string, v string) bool {
-	for _, vv := range s {
-		if vv == v {
-			return true
-		}
-	}
-	return false
 }
