@@ -78,7 +78,7 @@ type Metadata struct {
 	ScopesSupported                            []string `json:"scopes_supported"`
 	ResponseTypesSupported                     []string `json:"response_types_supported"`
 	GrantTypesSupported                        []string `json:"grant_types_supported"`
-	ServiceDocumentation                       []string `json:"service_documentation"`
+	ServiceDocumentation                       string   `json:"service_documentation"`
 	CodeChallengeMethodsSupported              []string `json:"code_challenge_methods_supported"`
 	AuthorizationResponseIssParameterSupported bool     `json:"authorization_response_iss_parameter_supported"`
 	UserInfoEndpoint                           string   `json:"userinfo_endpoint"`

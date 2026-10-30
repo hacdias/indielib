@@ -22,7 +22,8 @@ func TestDiscoverMetadata(t *testing.T) {
 						_, _ = w.Write([]byte(`{
 							"issuer": "https://example.org/",
 							"authorization_endpoint": "https://example.org/auth",
-							"token_endpoint": "https://example.org/token"
+							"token_endpoint": "https://example.org/token",
+							"service_documentation": "https://example.org/docs"
 						}`))
 						return
 					}
@@ -42,6 +43,7 @@ func TestDiscoverMetadata(t *testing.T) {
 		assert.EqualValues(t, "https://example.org/", endpoints.Issuer)
 		assert.EqualValues(t, "https://example.org/auth", endpoints.AuthorizationEndpoint)
 		assert.EqualValues(t, "https://example.org/token", endpoints.TokenEndpoint)
+		assert.EqualValues(t, "https://example.org/docs", endpoints.ServiceDocumentation)
 	}
 }
 
