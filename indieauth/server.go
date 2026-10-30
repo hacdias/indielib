@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	urlpkg "net/url"
 	"slices"
 	"strings"
+	"syscall"
 )
 
 var (
@@ -33,9 +35,12 @@ type Server struct {
 // NewServer creates a new [Server] that from the given options. If
 // no httpClient is given, a client with a 10 second timeout will be used.
 //
-// The server fetches client identifiers chosen by whoever sends the request.
-// Loopback addresses are never fetched, but domains that resolve to private
-// addresses are. To block those, pass an httpClient whose dialer rejects them.
+// The server fetches client identifiers chosen by whoever sends the request,
+// but never loopback ones. The default client enforces this when connecting,
+// which also covers domains that resolve to loopback and redirects. With your
+// own httpClient, only the client identifier itself is checked. Domains that
+// resolve to private addresses are fetched. To block those, pass an httpClient
+// whose dialer rejects them.
 func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 	s := &Server{
 		RequirePKCE: requirePKCE,
@@ -44,10 +49,28 @@ func NewServer(requirePKCE bool, httpClient *http.Client) *Server {
 	if httpClient != nil {
 		s.Client = httpClient
 	} else {
-		s.Client = &http.Client{Timeout: defaultTimeout}
+		s.Client = newServerClient()
 	}
 
 	return s
+}
+
+// newServerClient returns the default HTTP client of a [Server], which refuses
+// to connect to loopback and unspecified addresses.
+func newServerClient() *http.Client {
+	dialer := &net.Dialer{
+		Control: func(_, address string, _ syscall.RawConn) error {
+			host, _, _ := net.SplitHostPort(address)
+			if ip := net.ParseIP(host); ip.IsLoopback() || ip.IsUnspecified() {
+				return ErrLoopbackClientID
+			}
+			return nil
+		},
+	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = dialer.DialContext
+	return &http.Client{Timeout: defaultTimeout, Transport: transport}
 }
 
 type AuthenticationRequest struct {

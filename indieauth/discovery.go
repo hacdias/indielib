@@ -387,7 +387,7 @@ var ErrLoopbackClientID error = errors.New("client_id is a loopback address and 
 func isLoopback(u *url.URL) bool {
 	host := u.Hostname()
 	ip := net.ParseIP(host)
-	return host == "localhost" || (ip != nil && ip.IsLoopback())
+	return strings.EqualFold(strings.TrimSuffix(host, "."), "localhost") || (ip != nil && ip.IsLoopback())
 }
 
 // DiscoverApplicationMetadata fetches metadata for the application at the
